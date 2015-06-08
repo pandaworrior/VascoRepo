@@ -1,0 +1,2 @@
+This package is dedicated to provide a library with a web server, which
+mitigates the communication between a web server to the rest of the system.
