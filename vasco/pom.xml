@@ -28,6 +28,62 @@
     	<version>1.3.176</version>
     	<systemPath>${project.basedir}/lib/h2-1.3.176.jar</systemPath>
     </dependency>
+    <dependency>
+    	<groupId>io</groupId>
+    	<artifactId>io</artifactId>
+    	<scope>system</scope>
+    	<version>2.4</version>
+    	<systemPath>${project.basedir}/lib/commons-io-2.4.jar</systemPath>
+    </dependency>
+    <dependency>
+    	<groupId>jsqlparser</groupId>
+    	<artifactId>jsqlparser</artifactId>
+    	<scope>system</scope>
+    	<version>0</version>
+    	<systemPath>${project.basedir}/lib/jsqlparser.jar</systemPath>
+    </dependency>
+    <dependency>
+    	<groupId>javaparser</groupId>
+    	<artifactId>javaparser</artifactId>
+    	<scope>system</scope>
+    	<version>1.0.8</version>
+    	<systemPath>${project.basedir}/lib/javaparser-1.0.8.jar</systemPath>
+    </dependency>
+     <dependency>
+    	<groupId>jdtcore</groupId>
+    	<artifactId>jdtcore</artifactId>
+    	<scope>system</scope>
+    	<version>3.5.2</version>
+    	<systemPath>${project.basedir}/lib/org.eclipse.jdt.core_3.5.2.v_981_R35x.jar</systemPath>
+    </dependency>
+    <dependency>
+    	<groupId>text</groupId>
+    	<artifactId>text</artifactId>
+    	<scope>system</scope>
+    	<version>3.5.0</version>
+    	<systemPath>${project.basedir}/lib/org.eclipse.text_3.5.0.v20100601-1300.jar</systemPath>
+    </dependency>
+    <dependency>
+    	<groupId>netty</groupId>
+    	<artifactId>netty</artifactId>
+    	<scope>system</scope>
+    	<version>3.2.1</version>
+    	<systemPath>${project.basedir}/lib/netty-3.2.1.Final.jar</systemPath>
+    </dependency>
+    <dependency>
+    	<groupId>equinoxcommon</groupId>
+    	<artifactId>equinoxcommon</artifactId>
+    	<scope>system</scope>
+    	<version>3.6.0</version>
+    	<systemPath>${project.basedir}/lib/org.eclipse.equinox.common-3.6.0.v20100503.jar</systemPath>
+    </dependency>
+    <dependency>
+    	<groupId>rowset</groupId>
+    	<artifactId>rowset</artifactId>
+    	<scope>system</scope>
+    	<version>0</version>
+    	<systemPath>${project.basedir}/lib/com.sun.rowset.jar</systemPath>
+    </dependency>
   </dependencies>
   <build>
   <plugins>
@@ -38,6 +94,18 @@
     <configuration>
       <source>1.8</source>
       <target>1.8</target>
+      <excludes>
+        <exclude>**/org/mpi/vasco/sieve/runtimelogic/shadowoperationcreator/ShadowOperationCreator.java</exclude>
+      	<!--  <exclude>**/org/mpi/vasco/util/debug/**</exclude>-->
+      	<!--  <exclude>**/org/mpi/vasco/util/IDFactories/**</exclude>-->
+      	<exclude>**/org/mpi/vasco/util/weakestprecondtion/**</exclude>
+      	<exclude>**/org/mpi/vasco/util/annotationparser/**</exclude>
+      	<exclude>**/org/mpi/vasco/util/commonfunc/**</exclude>
+        <exclude>**/org/mpi/vasco/util/crdtlib/datatypes/**</exclude>
+        <exclude>**/org/mpi/vasco/util/crdtlib/dbannotationtypes/**</exclude>
+        <exclude>**/org/mpi/vasco/util/crdtlib/verifieddatatypes/**</exclude>
+          
+      </excludes>
     </configuration>
   </plugin>
 </plugins>

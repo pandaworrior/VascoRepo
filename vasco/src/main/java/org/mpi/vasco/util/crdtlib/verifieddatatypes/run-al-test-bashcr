@@ -1,0 +1,18 @@
+#/usr/bin/time jahob.opt NormalBoolean.java  -sastvc -hidden -timeout 10 -class NormalBoolean -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NormalDateTime.java  -sastvc -hidden -timeout 10 -class NormalDateTime -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NormalDouble.java  -sastvc -hidden -timeout 10 -class NormalDouble -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NormalFloat.java  -sastvc -hidden -timeout 10 -class NormalFloat -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NormalInteger.java  -sastvc -hidden -timeout 10 -class NormalInteger -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NormalString.java  -sastvc -hidden -timeout 10 -class NormalString -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NumberDeltaDateTime.java  -sastvc -hidden -timeout 10 -class NumberDeltaDateTime -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NumberDeltaDouble.java  -sastvc -hidden -timeout 10 -class NumberDeltaDouble -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NumberDeltaFloat.java  -sastvc -hidden -timeout 10 -class NumberDeltaFloat -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt NumberDeltaInteger.java  -sastvc -hidden -timeout 10 -class NumberDeltaInteger -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt LwwLogicalTimestamp.java -sastvc -hidden -timeout 10 -class LwwLogicalTimestamp -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+/usr/bin/time jahob.opt LwwBoolean.java LwwLogicalTimestamp.java  -sastvc -hidden -timeout 10 -class LwwBoolean -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt LwwDateTime.java LwwLogicalTimestamp.java  -sastvc -hidden -timeout 10 -class LwwDateTime -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt LwwDouble.java LwwLogicalTimestamp.java  -sastvc -hidden -timeout 10 -class LwwDouble -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt LwwFloat.java LwwLogicalTimestamp.java  -sastvc -hidden -timeout 10 -class LwwFloat -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt LwwInteger.java LwwLogicalTimestamp.java  -sastvc -hidden -timeout 10 -class LwwInteger -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+#/usr/bin/time jahob.opt LwwString.java LwwLogicalTimestamp.java  -sastvc -hidden -timeout 10 -class LwwString -usedp z3 spass:ArithAxioms:OrderAxioms cvcl isa
+
