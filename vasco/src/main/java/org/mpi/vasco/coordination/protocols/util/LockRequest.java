@@ -30,15 +30,20 @@ public class LockRequest{
 	/** The key list. */
 	List<String> keyList;
 	
+	byte[] arr;
+	
+	boolean hasDecoded;
+	
 	/**
 	 * Instantiates a new lock request.
 	 *
 	 * @param _opName the _op name
 	 * @param _keyList the _key list
 	 */
-	LockRequest(String _opName, List<String> _keyList){
+	public LockRequest(String _opName, List<String> _keyList){
 		this.setOpName(_opName);
 		this.setKeyList(_keyList);
+		this.setHasDecoded(false);
 	}
 	
 	/**
@@ -46,9 +51,14 @@ public class LockRequest{
 	 *
 	 * @param _opName the _op name
 	 */
-	LockRequest(String _opName){
+	public LockRequest(String _opName){
 		this.setOpName(_opName);
 		this.keyList = new ArrayList<String>();
+		this.setHasDecoded(false);
+	}
+
+	public LockRequest(byte[] _arr, int offset) {
+		// TODO Auto-generated constructor stub
 	}
 
 	/**
@@ -105,4 +115,35 @@ public class LockRequest{
 		}
 		return strBuild.toString();
     }
+	
+	public void decode(){
+		this.setArr(null);
+	}
+	
+	public byte[] getBytes(){
+		if(!this.isHasDecoded()){
+			this.decode();
+		}
+		return this.getArr();
+	}
+	
+	public int getByteSize(){
+		return this.getBytes().length;
+	}
+	
+	private byte[] getArr(){
+		return this.arr;
+	}
+
+	private void setArr(byte[] arr) {
+		this.arr = arr;
+	}
+
+	public boolean isHasDecoded() {
+		return hasDecoded;
+	}
+
+	public void setHasDecoded(boolean hasDecoded) {
+		this.hasDecoded = hasDecoded;
+	}
 }
