@@ -3,16 +3,14 @@ package org.mpi.vasco.txstore.storageshim;
 import org.mpi.vasco.util.debug.Debug;
 
 import org.mpi.vasco.txstore.BaseNode;
-import org.mpi.vasco.txstore.coordinator.ObjectPool;
 import org.mpi.vasco.txstore.membership.Role;
 
-import org.mpi.vasco.txstore.messages.MessageFactory;
 import org.mpi.vasco.txstore.messages.MessageTags;
-import org.mpi.vasco.txstore.messages.MessageBase;
 
 // receiving messages
 import org.mpi.vasco.txstore.messages.AckCommitTxnMessage;
 import org.mpi.vasco.txstore.messages.CommitShadowOpMessage;
+import org.mpi.vasco.txstore.messages.MessageFactory;
 import org.mpi.vasco.txstore.proxy.TransactionInfo;
 
 import org.mpi.vasco.txstore.util.ProxyTxnId;
@@ -27,6 +25,8 @@ import org.mpi.vasco.txstore.scratchpad.ScratchpadInterface;
 import org.mpi.vasco.txstore.scratchpad.ScratchpadFactory;
 import org.mpi.vasco.txstore.scratchpad.ScratchpadException;
 
+import org.mpi.vasco.network.messages.MessageBase;
+import org.mpi.vasco.network.messages.ObjectPool;
 import org.mpi.vasco.network.netty.NettyTCPSender;
 import org.mpi.vasco.network.netty.NettyTCPReceiver;
 import org.mpi.vasco.network.PassThroughNetworkQueue;

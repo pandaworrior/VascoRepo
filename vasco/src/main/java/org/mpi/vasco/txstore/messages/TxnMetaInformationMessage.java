@@ -1,5 +1,6 @@
 package org.mpi.vasco.txstore.messages;
 
+import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.txstore.util.StorageList;
 import org.mpi.vasco.txstore.util.WriteSet;
@@ -117,6 +118,12 @@ public class TxnMetaInformationMessage extends MessageBase{
 	    +logicalClock+", "//+dependencies
 	    +", "+timeStamp+">";
     }
+
+	@Override
+	public void reset() {
+		// TODO Auto-generated method stub
+		
+	}
 
 
 }

@@ -1,5 +1,6 @@
 package org.mpi.vasco.txstore.messages;
 
+import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.LogicalClock;
 import org.mpi.vasco.txstore.util.Operation;
 import org.mpi.vasco.txstore.util.ProxyTxnId;

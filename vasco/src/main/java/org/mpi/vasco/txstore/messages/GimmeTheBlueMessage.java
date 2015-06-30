@@ -1,6 +1,7 @@
 package org.mpi.vasco.txstore.messages;
 
 
+import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
 
@@ -57,5 +58,11 @@ public class GimmeTheBlueMessage extends MessageBase{
     public String toString(){
 	return "<"+getTagString()+", "+proxyTxnId+", "+getBlueEpoch()+">";
     }
+
+	@Override
+	public void reset() {
+		// TODO Auto-generated method stub
+		
+	}
 			    
 }

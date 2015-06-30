@@ -1,6 +1,7 @@
 package org.mpi.vasco.txstore.messages;
 import org.mpi.vasco.util.UnsignedTypes;
 
+import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.txstore.util.TimeStamp;
 import org.mpi.vasco.txstore.util.LogicalClock;
@@ -83,6 +84,12 @@ public class FinishRemoteMessage extends MessageBase{
     public String toString(){
 	return "<"+getTagString()+", "+proxyTxnId+", "+timestamp+", "+logicalClock+ ", " + color + ">";
     }
+
+	@Override
+	public void reset() {
+		// TODO Auto-generated method stub
+		
+	}
 
 
 }

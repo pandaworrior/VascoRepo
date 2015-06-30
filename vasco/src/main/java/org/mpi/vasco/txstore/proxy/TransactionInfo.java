@@ -1,6 +1,7 @@
 package org.mpi.vasco.txstore.proxy;
 import org.mpi.vasco.util.debug.Debug;
 
+import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ReadWriteSet;
 import org.mpi.vasco.txstore.util.StorageList;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
@@ -12,7 +13,6 @@ import org.mpi.vasco.txstore.util.Result;
 import org.mpi.vasco.txstore.messages.AckCommitTxnMessage;
 import org.mpi.vasco.txstore.messages.BeginTxnMessage;
 import org.mpi.vasco.txstore.messages.CommitTxnMessage;
-import org.mpi.vasco.txstore.messages.MessageBase;
 import org.mpi.vasco.txstore.messages.MessageTags;
 import org.mpi.vasco.txstore.messages.OperationMessage;
 import org.mpi.vasco.txstore.messages.ProxyCommitMessage;

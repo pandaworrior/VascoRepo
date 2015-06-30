@@ -10,11 +10,11 @@ import org.mpi.vasco.txstore.membership.Principal;
 import org.mpi.vasco.txstore.membership.Datacenter;
 
 import org.mpi.vasco.util.UnsignedTypes;
-import org.mpi.vasco.txstore.messages.Message;
 import org.mpi.vasco.txstore.util.StorageList;
 
 import org.mpi.vasco.network.ByteHandler;
 import org.mpi.vasco.network.NetworkSender;
+import org.mpi.vasco.network.messages.Message;
 
 import java.security.interfaces.*;
 import javax.crypto.*;

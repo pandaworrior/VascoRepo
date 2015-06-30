@@ -1,6 +1,7 @@
 package org.mpi.vasco.txstore.messages;
 
 
+import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.txstore.util.ReadWriteSet;
 
@@ -69,5 +70,11 @@ public class ReadWriteSetMessage extends MessageBase{
     public String toString(){
 	return "<"+getTagString()+", "+proxyTxnId+", "+rwset+">";
     }
+
+	@Override
+	public void reset() {
+		// TODO Auto-generated method stub
+		
+	}
 			    
 }

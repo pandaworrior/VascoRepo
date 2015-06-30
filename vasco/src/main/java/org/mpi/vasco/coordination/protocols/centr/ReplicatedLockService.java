@@ -25,10 +25,12 @@ import org.jgroups.protocols.raft.RAFT;
 import org.jgroups.protocols.raft.Role;
 import org.jgroups.raft.blocks.ReplicatedStateMachine;
 import org.jgroups.util.Util;
+import org.mpi.vasco.coordination.protocols.util.LockRequest;
+import org.mpi.vasco.txstore.util.ProxyTxnId;
 
 /**
  * The Class ReplicatedLockService.
- * TODO: change rsm K and V to txnId and LockRequest
+ * TODO: change rsm K and V to txnId string and LockRequest
  * TODO: add a DB Instance here, and start the DB instance before config the raft cluster
  * TODO: DB execute txn when put finishes
  * TODO: add a netty connection here and receive the message from clients
@@ -36,7 +38,7 @@ import org.jgroups.util.Util;
  */
 public class ReplicatedLockService extends ReceiverAdapter implements RAFT.RoleChange {
     protected JChannel                              ch;
-    protected ReplicatedStateMachine<String,Object> rsm;
+    protected ReplicatedStateMachine<String, LockRequest> rsm;//String is the string format of ProxyTxnId
 
     protected void start(String props, String name, boolean follower, long timeout) throws Exception {
         ch=new JChannel(props).name(name);
@@ -74,6 +76,7 @@ public class ReplicatedLockService extends ReceiverAdapter implements RAFT.RoleC
             election.noElections(true);
     }
 
+    /*
     protected void loop() {
         boolean looping=true;
         while(looping) {
@@ -111,11 +114,16 @@ public class ReplicatedLockService extends ReceiverAdapter implements RAFT.RoleC
                     break;
             }
         }
-    }
+    }*/
 
-    protected void put(String key, String value) {
+    //Cheng: have to setting in a loop and wait for the message sent by the client
+    protected void loop() {
+    	
+    }
+    
+    protected void put(String key, LockRequest value) {
         if(key == null || value == null) {
-            System.err.printf("Key (%s) or value (%s) is null\n",key,value);
+            System.err.printf("Key (%s) or value (%s) is null\n",key, value);
             return;
         }
         try {

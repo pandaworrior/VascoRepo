@@ -1,4 +1,4 @@
-package org.mpi.vasco.txstore.coordinator;
+package org.mpi.vasco.network.messages;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 

@@ -1,6 +1,7 @@
 package org.mpi.vasco.txstore.messages;
 
 
+import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.txstore.util.Result;
 
@@ -67,5 +68,11 @@ public class ResultMessage extends MessageBase{
     public String toString(){
 	return "<"+getTagString()+", "+proxyTxnId+", "+op+">";
     }
+
+	@Override
+	public void reset() {
+		// TODO Auto-generated method stub
+		
+	}
 			    
 }

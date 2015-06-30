@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * The Class LockRequest.
  */
-public class LockRequest {
+public class LockRequest{
 	
 	/** The op name. */
 	String opName;
@@ -96,4 +96,13 @@ public class LockRequest {
 		this.keyList.add(_key);
 	}
 
+	@Override
+    public String toString(){
+		StringBuilder strBuild = new StringBuilder();
+		strBuild.append("OpName: " + this.getOpName()+"\t");
+		for(int i = 0; i < this.getKeyList().size();i++){
+			strBuild.append("key " + i + " " + this.getKeyList().get(i) + "\t");
+		}
+		return strBuild.toString();
+    }
 }

@@ -1,8 +1,9 @@
 // $Id: MessageBase.java 510 2011-07-04 11:01:22Z chengli $
 
 
-package org.mpi.vasco.txstore.messages;
+package org.mpi.vasco.network.messages;
 
+import org.mpi.vasco.txstore.messages.MessageTags;
 import org.mpi.vasco.util.UnsignedTypes;
 import org.mpi.vasco.util.debug.Debug;
 
@@ -107,6 +108,9 @@ public abstract class MessageBase implements Message{
 
     private final static int baseSize = 
 	UnsignedTypes.uint16Size + UnsignedTypes.uint32Size;
+    
+    //reset a message for making the object reusable
+    public abstract void reset();
 
 
     public String getTagString(){

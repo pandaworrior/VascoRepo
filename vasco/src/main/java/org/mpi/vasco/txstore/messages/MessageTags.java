@@ -1,7 +1,9 @@
 package org.mpi.vasco.txstore.messages;
 
+import org.mpi.vasco.network.messages.MessageTagBase;
 
-public class MessageTags {
+
+public class MessageTags extends MessageTagBase{
 
 	// /// PROCESSING LOCAL TRANSACTIONS
 

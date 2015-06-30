@@ -4,13 +4,13 @@
  */
 package org.mpi.vasco.txstore.baseserver;
 
+import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.BaseNode;
 import org.mpi.vasco.txstore.membership.Role;
 import org.mpi.vasco.txstore.messages.MessageFactory;
 import org.mpi.vasco.txstore.messages.MessageTags;
 import org.mpi.vasco.txstore.messages.ResultMessage;
 import org.mpi.vasco.txstore.messages.OperationMessage;
-import org.mpi.vasco.txstore.messages.MessageBase;
 import org.mpi.vasco.util.debug.Debug;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.txstore.util.Operation;

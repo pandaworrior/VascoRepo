@@ -3,9 +3,7 @@ package org.mpi.vasco.txstore.coordinator;
 import org.mpi.vasco.txstore.BaseNode;
 import org.mpi.vasco.txstore.membership.Role;
 
-import org.mpi.vasco.txstore.messages.MessageFactory;
 import org.mpi.vasco.txstore.messages.MessageTags;
-import org.mpi.vasco.txstore.messages.MessageBase;
 
 // receiving messages
 import org.mpi.vasco.txstore.messages.AckCommitTxnMessage;
@@ -13,6 +11,7 @@ import org.mpi.vasco.txstore.messages.BeginTxnMessage;
 import org.mpi.vasco.txstore.messages.BlueTokenGrantMessage;
 import org.mpi.vasco.txstore.messages.CommitShadowOpMessage;
 import org.mpi.vasco.txstore.messages.FinishTxnMessage;
+import org.mpi.vasco.txstore.messages.MessageFactory;
 import org.mpi.vasco.txstore.messages.OperationMessage;
 import org.mpi.vasco.txstore.messages.ProxyCommitMessage;
 import org.mpi.vasco.txstore.messages.ReadWriteSetMessage;
@@ -42,6 +41,8 @@ import org.mpi.vasco.txstore.util.WriteSetEntry;
 import org.mpi.vasco.util.Counter;
 import org.mpi.vasco.util.debug.Debug;
 
+import org.mpi.vasco.network.messages.MessageBase;
+import org.mpi.vasco.network.messages.ObjectPool;
 import org.mpi.vasco.network.netty.NettyTCPSender;
 import org.mpi.vasco.network.netty.NettyTCPReceiver;
 import org.mpi.vasco.network.ParallelPassThroughNetworkQueue;

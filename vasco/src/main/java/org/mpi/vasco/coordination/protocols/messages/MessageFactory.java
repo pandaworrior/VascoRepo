@@ -1,4 +1,4 @@
-package org.mpi.vasco.txstore.messages;
+package org.mpi.vasco.coordination.protocols.messages;
 import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.network.messages.ObjectPool;
 import org.mpi.vasco.txstore.messages.AbortTxnMessage;
