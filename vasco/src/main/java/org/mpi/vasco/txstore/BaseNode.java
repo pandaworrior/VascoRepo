@@ -6,7 +6,6 @@ import org.mpi.vasco.util.debug.Debug;
 
 import org.mpi.vasco.txstore.membership.Role;
 import org.mpi.vasco.txstore.membership.Membership;
-import org.mpi.vasco.txstore.membership.Principal;
 import org.mpi.vasco.txstore.membership.Datacenter;
 
 import org.mpi.vasco.util.UnsignedTypes;
@@ -14,6 +13,7 @@ import org.mpi.vasco.txstore.util.StorageList;
 
 import org.mpi.vasco.network.ByteHandler;
 import org.mpi.vasco.network.NetworkSender;
+import org.mpi.vasco.network.Principal;
 import org.mpi.vasco.network.messages.Message;
 
 import java.security.interfaces.*;

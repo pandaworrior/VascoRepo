@@ -1,5 +1,7 @@
 package org.mpi.vasco.txstore.membership;
 
+import org.mpi.vasco.network.Principal;
+
 public class Datacenter{
 
     Coordinator coord[];

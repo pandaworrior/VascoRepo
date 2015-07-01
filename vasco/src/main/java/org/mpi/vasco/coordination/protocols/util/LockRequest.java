@@ -16,6 +16,11 @@
  *******************************************************************************/
 package org.mpi.vasco.coordination.protocols.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,8 +37,6 @@ public class LockRequest{
 	
 	byte[] arr;
 	
-	boolean hasDecoded;
-	
 	/**
 	 * Instantiates a new lock request.
 	 *
@@ -43,7 +46,7 @@ public class LockRequest{
 	public LockRequest(String _opName, List<String> _keyList){
 		this.setOpName(_opName);
 		this.setKeyList(_keyList);
-		this.setHasDecoded(false);
+		this.setArr(null);
 	}
 	
 	/**
@@ -54,11 +57,20 @@ public class LockRequest{
 	public LockRequest(String _opName){
 		this.setOpName(_opName);
 		this.keyList = new ArrayList<String>();
-		this.setHasDecoded(false);
+		this.setArr(null);
 	}
 
-	public LockRequest(byte[] _arr, int offset) {
+	public LockRequest(byte[] b, int offset) {
 		// TODO Auto-generated constructor stub
+		this.setArr(new byte[b.length - offset]);
+		System.arraycopy(b, offset, this.getArr(), 0, b.length - offset);
+		try {
+			this.decode();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.exit(-1);
+		}
 	}
 
 	/**
@@ -116,13 +128,38 @@ public class LockRequest{
 		return strBuild.toString();
     }
 	
-	public void decode(){
-		this.setArr(null);
+	private void decode() throws IOException{
+		ByteArrayInputStream bais = new ByteArrayInputStream(this.getArr());
+		DataInputStream dis = new DataInputStream(bais);
+		this.setOpName(dis.readUTF());
+		int numOfKeys = dis.readInt();
+		this.setKeyList(new ArrayList<String>());
+		while(numOfKeys > 0){
+			this.addKey(dis.readUTF());
+			numOfKeys--;
+		}
+	}
+	
+	private void encode() throws IOException{
+		if(this.getArr() == null){
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(baos);
+			dos.writeUTF(this.getOpName());
+			dos.writeInt(this.getKeyList().size());
+			for(String key : this.getKeyList()){
+				dos.writeUTF(key);
+			}
+			this.setArr(baos.toByteArray());
+		}
 	}
 	
 	public byte[] getBytes(){
-		if(!this.isHasDecoded()){
-			this.decode();
+		try {
+			this.encode();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		return this.getArr();
 	}
@@ -137,13 +174,5 @@ public class LockRequest{
 
 	private void setArr(byte[] arr) {
 		this.arr = arr;
-	}
-
-	public boolean isHasDecoded() {
-		return hasDecoded;
-	}
-
-	public void setHasDecoded(boolean hasDecoded) {
-		this.hasDecoded = hasDecoded;
 	}
 }

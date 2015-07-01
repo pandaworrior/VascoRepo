@@ -2,6 +2,8 @@ package org.mpi.vasco.txstore.membership;
 
 import java.net.InetAddress;
 
+import org.mpi.vasco.network.Principal;
+
 public class Storage extends Principal{
     final int storageId;
     final int dcId;

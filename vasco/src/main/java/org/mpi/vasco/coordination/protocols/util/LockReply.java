@@ -16,6 +16,11 @@
  *******************************************************************************/
 package org.mpi.vasco.coordination.protocols.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -36,9 +41,6 @@ public class LockReply {
 	/** The arr. */
 	byte[] arr;
 	
-	/** The has decoded. */
-	boolean hasDecoded;
-	
 	/**
 	 * Instantiates a new lock reply.
 	 *
@@ -48,7 +50,7 @@ public class LockReply {
 	public LockReply(String _opName, HashMap<String, Integer> _keyCounterMap){
 		this.setOpName(_opName);
 		this.setKeyCounterMap(_keyCounterMap);
-		this.setHasDecoded(false);
+		this.setArr(null);
 	}
 	
 	/**
@@ -59,7 +61,7 @@ public class LockReply {
 	public LockReply(String _opName){
 		this.setOpName(_opName);
 		this.setKeyCounterMap(new HashMap<String, Integer>());
-		this.setHasDecoded(false);
+		this.setArr(null);
 	}
 	
 	/**
@@ -69,7 +71,15 @@ public class LockReply {
 	 * @param offset the offset
 	 */
 	public LockReply(byte[] b, int offset){
-		
+		this.setArr(new byte[b.length - offset]);
+		System.arraycopy(b, offset, this.getArr(), 0, b.length - offset);
+		try {
+			this.decode();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.exit(-1);
+		}
 	}
 
 	/**
@@ -120,9 +130,40 @@ public class LockReply {
 	
 	/**
 	 * Decode.
+	 *
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public void decode(){
-		this.setArr(null);
+	private void decode() throws IOException{
+		ByteArrayInputStream bais = new ByteArrayInputStream(this.getArr());
+		DataInputStream dis = new DataInputStream(bais);
+		this.setOpName(dis.readUTF());
+		int numOfKeyCounterPairs = dis.readInt();
+		this.setKeyCounterMap(new HashMap<String, Integer>());
+		while(numOfKeyCounterPairs > 0){
+			this.addKeyCounterPair(dis.readUTF(), dis.readInt());
+			numOfKeyCounterPairs--;
+		}
+	}
+	
+	/**
+	 * Encode.
+	 *
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
+	private void encode() throws IOException{
+		if(this.getArr() == null){
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(baos);
+			dos.writeUTF(this.getOpName());
+			dos.writeInt(this.getKeyCounterMap().size());
+			Iterator it = this.getKeyCounterMap().entrySet().iterator();
+			while(it.hasNext()){
+				Map.Entry<String, Integer> e = (Entry<String, Integer>) it.next();
+				dos.writeUTF(e.getKey());
+				dos.writeInt(e.getValue().intValue());
+			}
+			this.setArr(baos.toByteArray());
+		}
 	}
 	
 	/**
@@ -131,8 +172,12 @@ public class LockReply {
 	 * @return the bytes
 	 */
 	public byte[] getBytes(){
-		if(!this.isHasDecoded()){
-			this.decode();
+		try {
+			this.encode();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		return this.getArr();
 	}
@@ -162,24 +207,6 @@ public class LockReply {
 	 */
 	public void setArr(byte[] arr) {
 		this.arr = arr;
-	}
-
-	/**
-	 * Checks if is checks for decoded.
-	 *
-	 * @return true, if is checks for decoded
-	 */
-	public boolean isHasDecoded() {
-		return hasDecoded;
-	}
-
-	/**
-	 * Sets the checks for decoded.
-	 *
-	 * @param hasDecoded the new checks for decoded
-	 */
-	public void setHasDecoded(boolean hasDecoded) {
-		this.hasDecoded = hasDecoded;
 	}
 	
 	/* (non-Javadoc)

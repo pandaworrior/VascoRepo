@@ -2,6 +2,8 @@ package org.mpi.vasco.txstore.membership;
 
 import java.net.InetAddress;
 
+import org.mpi.vasco.network.Principal;
+
 public class Coordinator extends Principal{
     private int dcId;
     public Coordinator(int dcId, String host, int port){
