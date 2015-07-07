@@ -32,6 +32,9 @@ public class LockServer extends Principal {
 	
 	/** The server id. */
 	private int serverId;
+	
+	/** The db port. */
+	private int dbPort;
 
 	/**
 	 * Instantiates a new lock server.
@@ -39,10 +42,12 @@ public class LockServer extends Principal {
 	 * @param sId the s id
 	 * @param host the host
 	 * @param port the port
+	 * @param dbPort the db port
 	 */
-	public LockServer(int sId, String host, int port) {
+	public LockServer(int sId, String host, int port, int dbPort) {
 		super(host, port);
 		this.setServerId(sId);
+		this.setDbPort(dbPort);
 	}
 
 	/**
@@ -51,10 +56,12 @@ public class LockServer extends Principal {
 	 * @param sId the s id
 	 * @param host the host
 	 * @param port the port
+	 * @param dbPort the db port
 	 */
-	public LockServer(int sId, InetAddress host, int port) {
+	public LockServer(int sId, InetAddress host, int port, int dbPort) {
 		super(host, port);
 		this.setServerId(sId);
+		this.setDbPort(dbPort);
 	}
 
 	/* (non-Javadoc)
@@ -80,6 +87,24 @@ public class LockServer extends Principal {
 	 */
 	public void setServerId(int serverId) {
 		this.serverId = serverId;
+	}
+
+	/**
+	 * Gets the db port.
+	 *
+	 * @return the db port
+	 */
+	public int getDbPort() {
+		return dbPort;
+	}
+
+	/**
+	 * Sets the db port.
+	 *
+	 * @param dbPort the new db port
+	 */
+	public void setDbPort(int dbPort) {
+		this.dbPort = dbPort;
 	}
 
 }

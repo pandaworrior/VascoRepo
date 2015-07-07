@@ -1,5 +1,7 @@
 package org.mpi.vasco.coordination.membership;
 
+import japa.parser.ast.expr.ThisExpr;
+
 import org.mpi.vasco.network.Principal;
 
 public class LockService {
@@ -9,7 +11,7 @@ public class LockService {
 	
 	public LockService(LockClient[] _lClients, LockServer[] _lServers){
 		this.setLockClients(_lClients);
-		this.setLockServers(lockServers);
+		this.setLockServers(_lServers);
 	}
 	
 	public LockClient[] getLockClients() {
@@ -46,7 +48,14 @@ public class LockService {
 	
 	public String toString(){
 		StringBuilder strBuild = new StringBuilder();
-		
+		strBuild.append("In total " + this.getLockServers().length + " servers \n");
+		for(int i = 0; i < this.getLockServers().length; i++){
+			strBuild.append(this.getLockServers()[i].toString() + "\n");
+		}
+		strBuild.append("In total " + this.getLockClients().length + " clients \n");
+		for(int i = 0; i < this.getLockClients().length; i++){
+			strBuild.append(this.getLockClients()[i].toString() + "\n");
+		}
 		return strBuild.toString();
 	}
 

@@ -50,7 +50,7 @@ public class Principal {
 		this.port = port;
 		uniqueid = count++;
 		this.isa = new InetSocketAddress(host, port);
-		System.out.println("ip address is:  " + isa);
+		//System.out.println("inet address is:  " + isa);
 
 	}
 

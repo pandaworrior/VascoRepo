@@ -1,0 +1,18 @@
+
+<!--
+  This file is used to configure the lock service for both server side and client side
+  By Cheng
+-->
+
+<lockService>
+    <lockServerCluster lsNum="3">
+    	<lockServer lsId="0" lsIP="127.0.0.1" lsPort="10000" dbPort="10000"/>
+    	<lockServer lsId="1" lsIP="127.0.0.1" lsPort="10000" dbPort="10000"/>
+    	<lockServer lsId="2" lsIP="127.0.0.1" lsPort="10000" dbPort="10000"/>
+    </lockServerCluster>
+    <lockClientGroup lcNum="3">
+    	<lockClient lcId="0" lcIP="127.0.0.1" lcPort="10000"/>
+    	<lockClient lcId="1" lcIP="127.0.0.1" lcPort="10000"/>
+    	<lockClient lcId="2" lcIP="127.0.0.1" lcPort="10000"/>
+    </lockClientGroup>
+</lockService>

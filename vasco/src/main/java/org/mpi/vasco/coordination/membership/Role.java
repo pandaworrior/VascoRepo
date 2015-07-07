@@ -32,9 +32,23 @@ public enum Role {
     
     /** The lockserver. */
     LOCKSERVER, 
- /** The lockclient. */
- LOCKCLIENT;
+    /** The lockclient. */
+    LOCKCLIENT;
 	// the remaining are more "application" side
 	// they should not be included
         //USER, APPPROXY;
+}
+
+class RoleFactory{
+	public static String getRoleString(Role r){
+		switch(r){
+		case LOCKSERVER:
+			return "Lock Server";
+		case LOCKCLIENT:
+			return "Lock Client";
+			default:
+				throw new RuntimeException("Invalid role " + r);
+		}
+		
+	}
 }

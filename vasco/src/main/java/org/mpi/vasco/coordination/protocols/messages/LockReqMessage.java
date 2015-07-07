@@ -20,6 +20,7 @@ package org.mpi.vasco.coordination.protocols.messages;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
+import org.mpi.vasco.util.UnsignedTypes;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -30,6 +31,9 @@ public class LockReqMessage extends MessageBase {
 	/** The proxy txn id. */
 	protected ProxyTxnId proxyTxnId;
 	
+	/** The global proxy id. */
+	protected int globalProxyId;
+	
 	/** The lock req. */
 	protected LockRequest lockReq;
     
@@ -39,14 +43,18 @@ public class LockReqMessage extends MessageBase {
      * @param _proxyTxnId the _proxy txn id
      * @param _lockReq the _lock req
      */
-    public LockReqMessage(ProxyTxnId _proxyTxnId, LockRequest _lockReq){
-	super(MessageTags.LOCKREQ, computeByteSize(_proxyTxnId, _lockReq));
+    public LockReqMessage(ProxyTxnId _proxyTxnId, int _globalProxyId, LockRequest _lockReq){
+	super(MessageTags.LOCKREQ, computeByteSize(_proxyTxnId, _globalProxyId, _lockReq));
 	this.setProxyTxnId(_proxyTxnId);
 	this.setLockReq(_lockReq);
+	this.setGlobalProxyId(_globalProxyId);
 	
 	int offset = getOffset();
 	proxyTxnId.getBytes(getBytes(), offset);
 	offset += proxyTxnId.getByteSize();
+	
+	UnsignedTypes.intToBytes(_globalProxyId, getBytes(), offset);
+	offset += UnsignedTypes.uint16Size;
 	
 	byte[] _lockReqBytes = _lockReq.getBytes();
 	int lenOfLockReqBytes = _lockReqBytes.length;
@@ -63,14 +71,18 @@ public class LockReqMessage extends MessageBase {
      * @param _proxyTxnId the _proxy txn id
      * @param _lockReq the _lock req
      */
-    public void encodeMessage(ProxyTxnId _proxyTxnId, LockRequest _lockReq){
+    public void encodeMessage(ProxyTxnId _proxyTxnId, int _globalProxyId, LockRequest _lockReq){
     	this.setProxyTxnId(_proxyTxnId);
     	this.setLockReq(_lockReq);
+    	this.setGlobalProxyId(_globalProxyId);
     	
-    	this.config(MessageTags.LOCKREQ, computeByteSize(_proxyTxnId, _lockReq));
+    	this.config(MessageTags.LOCKREQ, computeByteSize(_proxyTxnId, _globalProxyId, _lockReq));
     	int offset = getOffset();
     	proxyTxnId.getBytes(getBytes(), offset);
     	offset += proxyTxnId.getByteSize();
+    	
+    	UnsignedTypes.intToBytes(_globalProxyId, getBytes(), offset);
+    	offset += UnsignedTypes.uint16Size;
     	
     	byte[] _lockReqBytes = _lockReq.getBytes();
     	int lenOfLockReqBytes = _lockReqBytes.length;
@@ -94,6 +106,9 @@ public class LockReqMessage extends MessageBase {
 	proxyTxnId = new ProxyTxnId(b, offset);
 	offset += proxyTxnId.getByteSize();
 	
+	this.setGlobalProxyId(UnsignedTypes.bytesToInt(b, offset));
+	offset += UnsignedTypes.uint16Size;
+	
 	this.setLockReq(new LockRequest(b, offset));
 	offset += this.getLockReq().getByteSize();
 	if (offset != b.length)
@@ -114,6 +129,9 @@ public class LockReqMessage extends MessageBase {
     	proxyTxnId = new ProxyTxnId(b, offset);
     	offset += proxyTxnId.getByteSize();
     	
+    	this.setGlobalProxyId(UnsignedTypes.bytesToInt(b, offset));
+    	offset += UnsignedTypes.uint16Size;
+    	
     	this.setLockReq(new LockRequest(b, offset));
     	offset += this.getLockReq().getByteSize();
     	if (offset != b.length)
@@ -126,6 +144,7 @@ public class LockReqMessage extends MessageBase {
     public void reset(){
     	this.setProxyTxnId(null);
     	this.setLockReq(null);
+    	this.setGlobalProxyId(-1);
     }
 
     /**
@@ -135,15 +154,15 @@ public class LockReqMessage extends MessageBase {
      * @param _lockReq the _lock req
      * @return the int
      */
-    static int computeByteSize(ProxyTxnId _proxyTxnId, LockRequest _lockReq){
-    	return _proxyTxnId.getByteSize() + _lockReq.getByteSize();
+    static int computeByteSize(ProxyTxnId _proxyTxnId, int _globalProxyId, LockRequest _lockReq){
+    	return _proxyTxnId.getByteSize() + UnsignedTypes.uint16Size + _lockReq.getByteSize();
     }
 
     /* (non-Javadoc)
      * @see org.mpi.vasco.network.messages.MessageBase#toString()
      */
     public String toString(){
-    	String _str = "<"+getTagString()+", "+this.getProxyTxnId().toString()+" LockRequest "+this.getLockReq().toString();
+    	String _str = "<"+getTagString()+", "+this.getProxyTxnId().toString()+ " GlobalProxyId: " + this.getGlobalProxyId() + " LockRequest "+this.getLockReq().toString();
     	return _str;
     }
 
@@ -181,6 +200,24 @@ public class LockReqMessage extends MessageBase {
 	 */
 	public void setLockReq(LockRequest lockReq) {
 		this.lockReq = lockReq;
+	}
+
+	/**
+	 * Gets the global proxy id.
+	 *
+	 * @return the global proxy id
+	 */
+	public int getGlobalProxyId() {
+		return globalProxyId;
+	}
+
+	/**
+	 * Sets the global proxy id.
+	 *
+	 * @param globalProxyId the new global proxy id
+	 */
+	public void setGlobalProxyId(int globalProxyId) {
+		this.globalProxyId = globalProxyId;
 	}
 
 }

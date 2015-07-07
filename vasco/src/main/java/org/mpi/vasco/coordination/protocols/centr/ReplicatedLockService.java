@@ -25,12 +25,13 @@ import org.jgroups.protocols.raft.RAFT;
 import org.jgroups.protocols.raft.Role;
 import org.jgroups.raft.blocks.ReplicatedStateMachine;
 import org.jgroups.util.Util;
+import org.mpi.vasco.coordination.protocols.centr.store.H2DBInstance;
+import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
 /**
  * The Class ReplicatedLockService.
- * TODO: change rsm K and V to txnId string and LockRequest
  * TODO: add a DB Instance here, and start the DB instance before config the raft cluster
  * TODO: DB execute txn when put finishes
  * TODO: add a netty connection here and receive the message from clients
@@ -39,6 +40,8 @@ import org.mpi.vasco.txstore.util.ProxyTxnId;
 public class ReplicatedLockService extends ReceiverAdapter implements RAFT.RoleChange {
     protected JChannel                              ch;
     protected ReplicatedStateMachine<String, LockRequest> rsm;//String is the string format of ProxyTxnId
+    protected MessageHandlerServerSide communicatorForClient;	
+    protected H2DBInstance h2DB;
 
     protected void start(String props, String name, boolean follower, long timeout) throws Exception {
         ch=new JChannel(props).name(name);
@@ -121,17 +124,24 @@ public class ReplicatedLockService extends ReceiverAdapter implements RAFT.RoleC
     	
     }
     
-    protected void put(String key, LockRequest value) {
+    protected LockRepMessage put(String key, LockRequest value) {
         if(key == null || value == null) {
             System.err.printf("Key (%s) or value (%s) is null\n",key, value);
-            return;
+            return null;
         }
-        try {
-            rsm.put(key, value);
+        //synchronize on rsm
+        synchronized(rsm){
+	        try {
+	            rsm.put(key, value);
+	            //execute the db query here
+	        }
+	        catch(Throwable t) {
+	            System.err.println("failed setting " + key + "=" + value + ": " + t);
+	        }
         }
-        catch(Throwable t) {
-            System.err.println("failed setting " + key + "=" + value + ": " + t);
-        }
+        
+        //generate a message here
+        return null;
     }
 
     protected void get(String key) {
