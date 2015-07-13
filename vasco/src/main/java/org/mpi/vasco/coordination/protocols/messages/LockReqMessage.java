@@ -22,9 +22,9 @@ import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.util.UnsignedTypes;
 
-// TODO: Auto-generated Javadoc
 /**
- * The Class LockReqMessage.
+ * The Class LockReqMessage. SENT between Lock Client and Server for requesting
+ * a permission.
  */
 public class LockReqMessage extends MessageBase {
 	
@@ -162,7 +162,7 @@ public class LockReqMessage extends MessageBase {
      * @see org.mpi.vasco.network.messages.MessageBase#toString()
      */
     public String toString(){
-    	String _str = "<"+getTagString()+", "+this.getProxyTxnId().toString()+ " GlobalProxyId: " + this.getGlobalProxyId() + " LockRequest "+this.getLockReq().toString();
+    	String _str = "<"+getTagString()+", "+this.getProxyTxnId().toString()+ ", (GlobalProxyId, " + this.getGlobalProxyId() + "), "+this.getLockReq().toString() + ">";
     	return _str;
     }
 
@@ -218,6 +218,11 @@ public class LockReqMessage extends MessageBase {
 	 */
 	public void setGlobalProxyId(int globalProxyId) {
 		this.globalProxyId = globalProxyId;
+	}
+
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
 	}
 
 }

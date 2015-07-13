@@ -73,5 +73,10 @@ public class BeginTxnMessage extends MessageBase{
 	return "<"+getTagString()+", "+txnId+">";
     }
 
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
+
 
 }

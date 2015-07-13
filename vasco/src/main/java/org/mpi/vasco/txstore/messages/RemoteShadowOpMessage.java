@@ -175,4 +175,9 @@ public class RemoteShadowOpMessage extends MessageBase{
 	return "<"+getTagString()+", "+txnId+", "  + op + "," + timestamp + "," + logicalClock+ "," +color + ","+wset+">";
     }
 
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
+
 }

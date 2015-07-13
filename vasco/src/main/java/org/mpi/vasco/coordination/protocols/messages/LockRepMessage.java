@@ -20,9 +20,9 @@ import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
-// TODO: Auto-generated Javadoc
 /**
- * The Class LockRepMessage.
+ * The Class LockRepMessage. SENT between Lock Server and Client for granting
+ * a permission.
  */
 public class LockRepMessage extends MessageBase{
 	
@@ -39,7 +39,7 @@ public class LockRepMessage extends MessageBase{
 	 * @param _lockRly the _lock rly
 	 */
 	public LockRepMessage(ProxyTxnId _proxyTxnId, LockReply _lockRly){
-		super(MessageTags.LOCKREQ, computeByteSize(_proxyTxnId, _lockRly));
+		super(MessageTags.LOCKREP, computeByteSize(_proxyTxnId, _lockRly));
 		this.setProxyTxnId(_proxyTxnId);
 		this.setLockRly(_lockRly);
 		
@@ -66,7 +66,7 @@ public class LockRepMessage extends MessageBase{
 	    	this.setProxyTxnId(_proxyTxnId);
 	    	this.setLockRly(_lockRly);
 	    	
-	    	this.config(MessageTags.LOCKREQ, computeByteSize(_proxyTxnId, _lockRly));
+	    	this.config(MessageTags.LOCKREP, computeByteSize(_proxyTxnId, _lockRly));
 	    	int offset = getOffset();
 	    	proxyTxnId.getBytes(getBytes(), offset);
 	    	offset += proxyTxnId.getByteSize();
@@ -86,9 +86,9 @@ public class LockRepMessage extends MessageBase{
     	 */
     	public LockRepMessage(byte[] b){
 			super(b);
-			if (getTag() != MessageTags.LOCKREQ)
+			if (getTag() != MessageTags.LOCKREP)
 			    throw new RuntimeException("Invalid message tag.  looking for "+
-						       MessageTags.LOCKREQ+ " found "+getTag());
+						       MessageTags.LOCKREP+ " found "+getTag());
 			int offset = getOffset();
 			proxyTxnId = new ProxyTxnId(b, offset);
 			offset += proxyTxnId.getByteSize();
@@ -106,9 +106,9 @@ public class LockRepMessage extends MessageBase{
     	 */
     	public void decodeMessage(byte[] b){
 	    	this.decodeMessage(b, 0);
-	    	if (getTag() != MessageTags.LOCKREQ)
+	    	if (getTag() != MessageTags.LOCKREP)
 	    	    throw new RuntimeException("Invalid message tag.  looking for "+
-	    				       MessageTags.LOCKREQ+ " found "+getTag());
+	    				       MessageTags.LOCKREP+ " found "+getTag());
 	    	int offset = getOffset();
 	    	proxyTxnId = new ProxyTxnId(b, offset);
 	    	offset += proxyTxnId.getByteSize();
@@ -142,7 +142,7 @@ public class LockRepMessage extends MessageBase{
     	 * @see org.mpi.vasco.network.messages.MessageBase#toString()
     	 */
     	public String toString(){
-	    	String _str = "<"+getTagString()+", "+this.getProxyTxnId().toString()+" LockReply: " + this.getLockRly().toString();
+	    	String _str = "<"+getTagString()+", "+this.getProxyTxnId().toString()+", " + this.getLockRly().toString() +">";
 	    	return _str;
 	    }
 
@@ -180,6 +180,11 @@ public class LockRepMessage extends MessageBase{
 		 */
 		public void setLockRly(LockReply lockRly) {
 			this.lockRly = lockRly;
+		}
+
+		@Override
+		public String getTagString() {
+			return MessageTags.getString(this.getTag());
 		}
 
 }

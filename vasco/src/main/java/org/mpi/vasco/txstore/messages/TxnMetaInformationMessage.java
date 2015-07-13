@@ -125,5 +125,10 @@ public class TxnMetaInformationMessage extends MessageBase{
 		
 	}
 
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
+
 
 }

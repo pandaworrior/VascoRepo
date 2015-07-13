@@ -214,12 +214,14 @@ public class LockReply {
 	 */
 	public String toString(){
 		StringBuilder strBuild = new StringBuilder();
-		strBuild.append("OpName: " + this.getOpName()+"\t");
+		strBuild.append("<(OpName, " + this.getOpName()+"), (keys, {");
 		Iterator it = this.getKeyCounterMap().entrySet().iterator();
 		while(it.hasNext()){
 			Map.Entry<String, Integer> e = (Entry<String, Integer>) it.next();
-			strBuild.append(e.getKey() + " -> " + e.getValue().intValue() + "\t");
+			strBuild.append("(" + e.getKey() + ", " + e.getValue().intValue() + "),");
 		}
+		strBuild.deleteCharAt(strBuild.length() - 1);
+		strBuild.append("})>");
 		return strBuild.toString();
 	}
 

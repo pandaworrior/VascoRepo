@@ -100,5 +100,10 @@ public class AckTxnMessage extends MessageBase{
 	return "<"+getTagString()+", "+proxyTxnId+", "+timeStamp+">";
     }
 
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
+
 
 }

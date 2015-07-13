@@ -58,4 +58,9 @@ public class BlueTokenGrantMessage extends MessageBase{
 			// TODO Auto-generated method stub
 			
 		}
+
+		@Override
+		public String getTagString() {
+			return MessageTags.getString(this.getTag());
+		}
 }

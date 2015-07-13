@@ -33,7 +33,7 @@ public class LockRequest{
 	String opName;
 	
 	/** The key list. */
-	List<String> keyList;
+	List<String> keyList;//TODO: perhaps a set is better in terms of avoiding duplicates
 	
 	byte[] arr;
 	
@@ -121,10 +121,12 @@ public class LockRequest{
 	@Override
     public String toString(){
 		StringBuilder strBuild = new StringBuilder();
-		strBuild.append("OpName: " + this.getOpName()+"\t");
+		strBuild.append("< (OpName, " + this.getOpName()+"), (keys, {");
 		for(int i = 0; i < this.getKeyList().size();i++){
-			strBuild.append("key " + i + " " + this.getKeyList().get(i) + "\t");
+			strBuild.append("key " + i + " " + this.getKeyList().get(i) + ",");
 		}
+		strBuild.deleteCharAt(strBuild.length() - 1);
+		strBuild.append("})>");
 		return strBuild.toString();
     }
 	

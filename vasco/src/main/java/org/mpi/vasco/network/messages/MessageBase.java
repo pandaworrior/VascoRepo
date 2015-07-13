@@ -19,11 +19,9 @@
 
 package org.mpi.vasco.network.messages;
 
-import org.mpi.vasco.txstore.messages.MessageTags;
 import org.mpi.vasco.util.UnsignedTypes;
 import org.mpi.vasco.util.debug.Debug;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class MessageBase.
  */
@@ -210,18 +208,16 @@ public abstract class MessageBase implements Message{
      *
      * @return the tag string
      */
-    public String getTagString(){
-	return MessageTags.getString(tag);
-    }
+    /*public String getTagString(){
+	return MessageTagBase.getString(tag);
+    }*/
+    
+    public abstract String getTagString();
 
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
-    public String toString(){
-	return "<MB, tag:"+getTagString()+", payloadSize:"+getPayloadSize()+", sender:"+
-	    //getSender()+
-	    ">";
-    }
+    public abstract String toString();
 
 }
 

@@ -53,5 +53,10 @@ public class AbortTxnMessage extends MessageBase{
 		
 	}
 
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
+
 
 }

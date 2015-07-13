@@ -5,14 +5,10 @@
 -->
 
 <lockService>
-    <lockServerCluster lsNum="3">
-    	<lockServer lsId="0" lsIP="127.0.0.1" lsPort="10000" dbPort="10000"/>
-    	<lockServer lsId="1" lsIP="127.0.0.1" lsPort="10000" dbPort="10000"/>
-    	<lockServer lsId="2" lsIP="127.0.0.1" lsPort="10000" dbPort="10000"/>
+    <lockServerCluster lsNum="1">
+    	<lockServer lsId="0" lsIP="127.0.0.1" lsPort="10000" dbPort="10001"/>
     </lockServerCluster>
-    <lockClientGroup lcNum="3">
-    	<lockClient lcId="0" lcIP="127.0.0.1" lcPort="10000"/>
-    	<lockClient lcId="1" lcIP="127.0.0.1" lcPort="10000"/>
-    	<lockClient lcId="2" lcIP="127.0.0.1" lcPort="10000"/>
+    <lockClientGroup lcNum="1">
+    	<lockClient lcId="0" lcIP="127.0.0.1" lcPort="10002"/>
     </lockClientGroup>
 </lockService>

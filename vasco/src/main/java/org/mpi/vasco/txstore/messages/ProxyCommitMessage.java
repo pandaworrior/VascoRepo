@@ -135,4 +135,9 @@ public class ProxyCommitMessage extends MessageBase {
     public String toString(){
 	return "<"+getTagString()+", "+txnId+", "+rwset + "," + op+ "," + color+">";
     }
+
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
 }

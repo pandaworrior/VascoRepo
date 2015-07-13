@@ -84,6 +84,13 @@
     	<version>0</version>
     	<systemPath>${project.basedir}/lib/com.sun.rowset.jar</systemPath>
     </dependency>
+    <dependency>
+    	<groupId>common</groupId>
+    	<artifactId>common</artifactId>
+    	<version>3-3.4</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/lib/commons-lang3-3.4.jar</systemPath>
+    </dependency>
   </dependencies>
   <build>
   <plugins>

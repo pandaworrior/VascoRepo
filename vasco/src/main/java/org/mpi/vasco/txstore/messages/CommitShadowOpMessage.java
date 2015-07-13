@@ -133,4 +133,9 @@ public class CommitShadowOpMessage extends MessageBase{
 	return "<"+getTagString()+", "+txnId+", "  + op + "," + timestamp + "," + logicalClock+">";
     }
 
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
+
 }

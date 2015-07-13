@@ -104,5 +104,10 @@ public class OperationMessage extends MessageBase{
     public String toString(){
 	return "<"+getTagString()+", "+proxyTxnId+", "+op+">";
     }
+
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
 			    
 }

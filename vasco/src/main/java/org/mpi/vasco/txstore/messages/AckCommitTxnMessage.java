@@ -89,4 +89,9 @@ public class AckCommitTxnMessage extends MessageBase {
 	return "<"+getTagString()+", "+proxyTxnId+", "+success+">";
     }
 
+	@Override
+	public String getTagString() {
+		return MessageTags.getString(this.getTag());
+	}
+
 }
