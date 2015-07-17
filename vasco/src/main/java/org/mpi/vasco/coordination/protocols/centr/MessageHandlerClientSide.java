@@ -1,12 +1,9 @@
 package org.mpi.vasco.coordination.protocols.centr;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.jgroups.util.Util;
 import org.mpi.vasco.coordination.BaseNode;
 import org.mpi.vasco.coordination.membership.Role;
 import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
@@ -84,14 +81,17 @@ public class MessageHandlerClientSide extends BaseNode{
 		ProxyTxnId txnId = new ProxyTxnId(0, 0, counterPerClient++);
 		LockRequest lr = new LockRequest(RandomStringUtils.randomAlphabetic(5).toLowerCase());
 		Random random = new Random();
-		int numOfKeys = random.nextInt(10);
-		Debug.printf("Generate %d keys\n", numOfKeys);
-		List<String> keys = new ArrayList<String>();
-		for(int i = 0; i < numOfKeys; i++){
-			String key = RandomStringUtils.randomAlphabetic(i+1).toLowerCase();
-			keys.add(key);
+		int numOfKeyGroups = random.nextInt(5);
+		Debug.printf("Generate %d key groups\n", numOfKeyGroups);
+		for(int i = 0; i < numOfKeyGroups; i++){
+			String keyGroupStr = RandomStringUtils.randomAlphabetic(10).toLowerCase();
+			int numOfKeys = random.nextInt(10);
+			while(numOfKeys > 0){
+				String keyStr = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+				numOfKeys--;
+				lr.addKey(keyGroupStr, keyStr);
+			}
 		}
-		lr.setKeyList(keys);
 		LockReqMessage msg = new LockReqMessage(txnId, myId, lr);
 		return msg;
 	}

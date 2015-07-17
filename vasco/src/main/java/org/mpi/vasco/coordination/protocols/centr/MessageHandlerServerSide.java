@@ -5,6 +5,10 @@
 package org.mpi.vasco.coordination.protocols.centr;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.mpi.vasco.coordination.BaseNode;
@@ -73,13 +77,15 @@ public class MessageHandlerServerSide extends BaseNode{
 	public LockRepMessage generateRandomReplyMessage(LockReqMessage msg){
 		Debug.println("Generate a random reply message");
 		LockReply rp = new LockReply(msg.getLockReq().getOpName());
-		HashMap<String, Integer> mp = new HashMap<String, Integer>();
-		for(int i = 0; i < msg.getLockReq().getKeyList().size(); i++){
-			String key = msg.getLockReq().getKeyList().get(i);
-			int counter = RandomUtils.nextInt(0, 100);
-			mp.put(key, counter);
+		Iterator it = msg.getLockReq().getKeyList().entrySet().iterator();
+		while(it.hasNext()){
+			Map.Entry<String, Set<String>> e = (Entry<String, Set<String>>) it.next();
+			String keyGroup = e.getKey();
+			for(String key : e.getValue()){
+				int counter = RandomUtils.nextInt(0, 100);
+				rp.addKeyCounterPair(keyGroup, key, counter);
+			}
 		}
-		rp.setKeyCounterMap(mp);
 		LockRepMessage pMsg = new LockRepMessage(msg.getProxyTxnId(), rp);
 		return pMsg;
 	}

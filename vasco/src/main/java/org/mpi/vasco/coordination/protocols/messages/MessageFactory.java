@@ -16,9 +16,9 @@
  *******************************************************************************/
 package org.mpi.vasco.coordination.protocols.messages;
 import org.mpi.vasco.network.messages.MessageBase;
-import org.mpi.vasco.network.messages.ObjectPool;
 
 
+import org.mpi.vasco.util.ObjectPool;
 import org.mpi.vasco.util.UnsignedTypes;
 
 // TODO: Auto-generated Javadoc

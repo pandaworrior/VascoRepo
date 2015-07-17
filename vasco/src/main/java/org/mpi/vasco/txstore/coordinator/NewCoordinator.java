@@ -39,10 +39,10 @@ import org.mpi.vasco.txstore.util.WriteSet;
 import org.mpi.vasco.txstore.util.WriteSetEntry;
 
 import org.mpi.vasco.util.Counter;
+import org.mpi.vasco.util.ObjectPool;
 import org.mpi.vasco.util.debug.Debug;
 
 import org.mpi.vasco.network.messages.MessageBase;
-import org.mpi.vasco.network.messages.ObjectPool;
 import org.mpi.vasco.network.netty.NettyTCPSender;
 import org.mpi.vasco.network.netty.NettyTCPReceiver;
 import org.mpi.vasco.network.ParallelPassThroughNetworkQueue;

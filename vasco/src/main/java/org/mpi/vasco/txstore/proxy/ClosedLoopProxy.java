@@ -1,9 +1,9 @@
 package org.mpi.vasco.txstore.proxy;
 
+import org.mpi.vasco.util.ObjectPool;
 import org.mpi.vasco.util.debug.Debug;
 
 import org.mpi.vasco.network.messages.MessageBase;
-import org.mpi.vasco.network.messages.ObjectPool;
 import org.mpi.vasco.txstore.BaseNode;
 import org.mpi.vasco.txstore.coordinator.TransactionRecord;
 import org.mpi.vasco.txstore.membership.Role;

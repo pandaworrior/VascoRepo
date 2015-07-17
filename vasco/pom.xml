@@ -111,7 +111,7 @@
         <exclude>**/org/mpi/vasco/util/crdtlib/datatypes/**</exclude>
         <exclude>**/org/mpi/vasco/util/crdtlib/dbannotationtypes/**</exclude>
         <exclude>**/org/mpi/vasco/util/crdtlib/verifieddatatypes/**</exclude>
-          
+        <exclude>**/org/mpi/vasco/coordination/protocols/centr/rsm/DBService.java</exclude>  
       </excludes>
     </configuration>
   </plugin>

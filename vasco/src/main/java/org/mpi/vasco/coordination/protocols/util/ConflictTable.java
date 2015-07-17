@@ -35,7 +35,7 @@ import org.mpi.vasco.util.debug.Debug;
  */
 public class ConflictTable {
 
-	/** The all conflicts. */
+	/** The all conflicts. Not thread-safe, but it is fine since it is not modified at runtime*/
 	HashMap<String, Conflict> allConflicts;
 	
 	private final static String CONFLICT_COLLECTION_STR = "collectionOfConflicts";

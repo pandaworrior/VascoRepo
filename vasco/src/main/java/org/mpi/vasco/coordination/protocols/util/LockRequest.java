@@ -22,7 +22,13 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * The Class LockRequest.
@@ -33,7 +39,8 @@ public class LockRequest{
 	String opName;
 	
 	/** The key list. */
-	List<String> keyList;//TODO: perhaps a set is better in terms of avoiding duplicates
+	/** key -> database table name; value -> a list of keys for that table, compound keys will be concatenated*/
+	HashMap<String, Set<String>> keyList;
 	
 	byte[] arr;
 	
@@ -43,7 +50,7 @@ public class LockRequest{
 	 * @param _opName the _op name
 	 * @param _keyList the _key list
 	 */
-	public LockRequest(String _opName, List<String> _keyList){
+	public LockRequest(String _opName, HashMap<String, Set<String>> _keyList){
 		this.setOpName(_opName);
 		this.setKeyList(_keyList);
 		this.setArr(null);
@@ -56,12 +63,11 @@ public class LockRequest{
 	 */
 	public LockRequest(String _opName){
 		this.setOpName(_opName);
-		this.keyList = new ArrayList<String>();
+		this.keyList = new HashMap<String, Set<String>>();
 		this.setArr(null);
 	}
 
 	public LockRequest(byte[] b, int offset) {
-		// TODO Auto-generated constructor stub
 		this.setArr(new byte[b.length - offset]);
 		System.arraycopy(b, offset, this.getArr(), 0, b.length - offset);
 		try {
@@ -96,7 +102,7 @@ public class LockRequest{
 	 *
 	 * @return the key list
 	 */
-	public List<String> getKeyList() {
+	public HashMap<String, Set<String>> getKeyList() {
 		return keyList;
 	}
 
@@ -105,7 +111,7 @@ public class LockRequest{
 	 *
 	 * @param keyList the new key list
 	 */
-	public void setKeyList(List<String> keyList) {
+	public void setKeyList(HashMap<String, Set<String>> keyList) {
 		this.keyList = keyList;
 	}
 	
@@ -114,16 +120,31 @@ public class LockRequest{
 	 *
 	 * @param _key the _key
 	 */
-	public void addKey(String _key){
-		this.keyList.add(_key);
+	public void addKey(String _key, String _value){
+		Set<String> keyValues = this.getKeyList().get(_key);
+		if(keyValues == null){
+			keyValues = new HashSet<String>();
+			this.getKeyList().put(_key, keyValues);
+		}
+		keyValues.add(_value);
 	}
 
 	@Override
     public String toString(){
 		StringBuilder strBuild = new StringBuilder();
 		strBuild.append("< (OpName, " + this.getOpName()+"), (keys, {");
-		for(int i = 0; i < this.getKeyList().size();i++){
-			strBuild.append("key " + i + " " + this.getKeyList().get(i) + ",");
+		Iterator it = this.getKeyList().entrySet().iterator();
+		while(it.hasNext()){
+			Map.Entry<String, Set<String>> e = (Entry<String, Set<String>>) it.next();
+			strBuild.append("<keyGroup: ");
+			strBuild.append(e.getKey());
+			strBuild.append(", keys: {");
+			for(String s : e.getValue()){
+				strBuild.append(s);
+				strBuild.append(',');
+			}
+			strBuild.deleteCharAt(strBuild.length() - 1);
+			strBuild.append("}>,");
 		}
 		strBuild.deleteCharAt(strBuild.length() - 1);
 		strBuild.append("})>");
@@ -134,11 +155,17 @@ public class LockRequest{
 		ByteArrayInputStream bais = new ByteArrayInputStream(this.getArr());
 		DataInputStream dis = new DataInputStream(bais);
 		this.setOpName(dis.readUTF());
-		int numOfKeys = dis.readInt();
-		this.setKeyList(new ArrayList<String>());
-		while(numOfKeys > 0){
-			this.addKey(dis.readUTF());
-			numOfKeys--;
+		int numOfKeyGroups = dis.readInt();
+		this.setKeyList(new HashMap<String, Set<String>>());
+		while(numOfKeyGroups > 0){
+			String keyGroupStr = dis.readUTF();
+			int numOfKeys = dis.readInt();
+			while(numOfKeys > 0){
+				String keyStr = dis.readUTF();
+				this.addKey(keyGroupStr, keyStr);
+				numOfKeys--;
+			}
+			numOfKeyGroups--;
 		}
 	}
 	
@@ -148,8 +175,14 @@ public class LockRequest{
 			DataOutputStream dos = new DataOutputStream(baos);
 			dos.writeUTF(this.getOpName());
 			dos.writeInt(this.getKeyList().size());
-			for(String key : this.getKeyList()){
-				dos.writeUTF(key);
+			Iterator it = this.getKeyList().entrySet().iterator();
+			while(it.hasNext()){
+				Map.Entry<String, Set<String>> e = (Map.Entry<String, Set<String>>) it.next();
+				dos.writeUTF(e.getKey());
+				dos.writeInt(e.getValue().size());
+				for(String s : e.getValue()){
+					dos.writeUTF(s);
+				}
 			}
 			this.setArr(baos.toByteArray());
 		}

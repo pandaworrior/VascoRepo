@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -35,8 +36,11 @@ public class LockReply {
 	/** The op name. */
 	String opName;
 	
-	/** The key counter map. */
-	HashMap<String, Integer> keyCounterMap;
+	/** The key counter map. 
+	 * key -> table name
+	 * value -> hashmap from key to counter
+	 * */
+	HashMap<String, HashMap<String, Integer>> keyCounterMap;
 	
 	/** The arr. */
 	byte[] arr;
@@ -47,7 +51,7 @@ public class LockReply {
 	 * @param _opName the _op name
 	 * @param _keyCounterMap the _key counter map
 	 */
-	public LockReply(String _opName, HashMap<String, Integer> _keyCounterMap){
+	public LockReply(String _opName, HashMap<String, HashMap<String, Integer>> _keyCounterMap){
 		this.setOpName(_opName);
 		this.setKeyCounterMap(_keyCounterMap);
 		this.setArr(null);
@@ -60,7 +64,7 @@ public class LockReply {
 	 */
 	public LockReply(String _opName){
 		this.setOpName(_opName);
-		this.setKeyCounterMap(new HashMap<String, Integer>());
+		this.setKeyCounterMap(new HashMap<String, HashMap<String, Integer>>());
 		this.setArr(null);
 	}
 	
@@ -105,7 +109,7 @@ public class LockReply {
 	 *
 	 * @return the key counter map
 	 */
-	public HashMap<String, Integer> getKeyCounterMap() {
+	public HashMap<String, HashMap<String, Integer>> getKeyCounterMap() {
 		return keyCounterMap;
 	}
 
@@ -114,7 +118,7 @@ public class LockReply {
 	 *
 	 * @param keyCounterMap the key counter map
 	 */
-	public void setKeyCounterMap(HashMap<String, Integer> keyCounterMap) {
+	public void setKeyCounterMap(HashMap<String, HashMap<String, Integer>> keyCounterMap) {
 		this.keyCounterMap = keyCounterMap;
 	}
 	
@@ -124,8 +128,13 @@ public class LockReply {
 	 * @param key the key
 	 * @param counter the counter
 	 */
-	public void addKeyCounterPair(String key, int counter){
-		this.getKeyCounterMap().put(key, counter);
+	public void addKeyCounterPair(String keyGroup, String key, int counter){
+		HashMap<String, Integer> keyCounter = this.getKeyCounterMap().get(keyGroup);
+		if(keyCounter == null){
+			keyCounter = new HashMap<String, Integer>();
+			this.getKeyCounterMap().put(keyGroup, keyCounter);
+		}
+		keyCounter.put(key, counter);
 	}
 	
 	/**
@@ -137,11 +146,16 @@ public class LockReply {
 		ByteArrayInputStream bais = new ByteArrayInputStream(this.getArr());
 		DataInputStream dis = new DataInputStream(bais);
 		this.setOpName(dis.readUTF());
-		int numOfKeyCounterPairs = dis.readInt();
-		this.setKeyCounterMap(new HashMap<String, Integer>());
-		while(numOfKeyCounterPairs > 0){
-			this.addKeyCounterPair(dis.readUTF(), dis.readInt());
-			numOfKeyCounterPairs--;
+		int numOfKeyGroups = dis.readInt();
+		this.setKeyCounterMap(new HashMap<String, HashMap<String, Integer>>());
+		while(numOfKeyGroups > 0){
+			String keyGroupStr = dis.readUTF();
+			int numOfKeys = dis.readInt();
+			while(numOfKeys > 0){
+				this.addKeyCounterPair(keyGroupStr, dis.readUTF(), dis.readInt());
+				numOfKeys--;
+			}
+			numOfKeyGroups--;
 		}
 	}
 	
@@ -158,9 +172,14 @@ public class LockReply {
 			dos.writeInt(this.getKeyCounterMap().size());
 			Iterator it = this.getKeyCounterMap().entrySet().iterator();
 			while(it.hasNext()){
-				Map.Entry<String, Integer> e = (Entry<String, Integer>) it.next();
+				Map.Entry<String, HashMap<String, Integer>> e = (Entry<String, HashMap<String, Integer>>) it.next();
 				dos.writeUTF(e.getKey());
-				dos.writeInt(e.getValue().intValue());
+				dos.writeInt(e.getValue().size());
+				Set<String> keySet = e.getValue().keySet();
+				for(String key : keySet){
+					dos.writeUTF(key);
+					dos.writeInt(e.getValue().get(key).intValue());
+				}
 			}
 			this.setArr(baos.toByteArray());
 		}
@@ -217,8 +236,21 @@ public class LockReply {
 		strBuild.append("<(OpName, " + this.getOpName()+"), (keys, {");
 		Iterator it = this.getKeyCounterMap().entrySet().iterator();
 		while(it.hasNext()){
-			Map.Entry<String, Integer> e = (Entry<String, Integer>) it.next();
-			strBuild.append("(" + e.getKey() + ", " + e.getValue().intValue() + "),");
+			Map.Entry<String, HashMap<String, Integer>> e = (Entry<String, HashMap<String, Integer>>) it.next();
+			strBuild.append("<keyGroups: ");
+			strBuild.append(e.getKey());
+			strBuild.append(", {");
+			Iterator keyIt = e.getValue().entrySet().iterator();
+			while(keyIt.hasNext()){
+				Entry<String, Integer> keyEntry = (Entry<String, Integer>) keyIt.next();
+				strBuild.append('(');
+				strBuild.append(keyEntry.getKey());
+				strBuild.append(',');
+				strBuild.append(keyEntry.getValue().intValue());
+				strBuild.append("),");
+			}
+			strBuild.deleteCharAt(strBuild.length() - 1);
+			strBuild.append("}, ");
 		}
 		strBuild.deleteCharAt(strBuild.length() - 1);
 		strBuild.append("})>");

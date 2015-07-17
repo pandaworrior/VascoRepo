@@ -1,6 +1,5 @@
 package org.mpi.vasco.txstore.messages;
 import org.mpi.vasco.network.messages.MessageBase;
-import org.mpi.vasco.network.messages.ObjectPool;
 import org.mpi.vasco.txstore.messages.AbortTxnMessage;
 import org.mpi.vasco.txstore.messages.AckCommitTxnMessage;
 import org.mpi.vasco.txstore.messages.AckTxnMessage;
@@ -24,6 +23,7 @@ import org.mpi.vasco.txstore.messages.TxnMetaInformationMessage;
 import org.mpi.vasco.txstore.messages.TxnReadyMessage;
 
 
+import org.mpi.vasco.util.ObjectPool;
 import org.mpi.vasco.util.UnsignedTypes;
 
 public class MessageFactory{

@@ -1,6 +1,7 @@
 
 <!--
   This file is used to configure the lock service for both server side and client side
+  All sub-attributes must be put between two lockService tags.
   By Cheng
 -->
 
@@ -11,4 +12,10 @@
     <lockClientGroup lcNum="1">
     	<lockClient lcId="0" lcIP="127.0.0.1" lcPort="10002"/>
     </lockClientGroup>
+    
+    <collectionOfConflicts numOfConflicts="3">
+		<conflict leftOperand="a" rightOperand="b"/>
+		<conflict leftOperand="b" rightOperand="a"/>
+		<conflict leftOperand="c" rightOperand="c"/>
+	</collectionOfConflicts>
 </lockService>

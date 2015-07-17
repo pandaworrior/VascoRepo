@@ -1,5 +1,6 @@
 package org.mpi.vasco.txstore.storageshim;
 
+import org.mpi.vasco.util.ObjectPool;
 import org.mpi.vasco.util.debug.Debug;
 
 import org.mpi.vasco.txstore.BaseNode;
@@ -26,7 +27,6 @@ import org.mpi.vasco.txstore.scratchpad.ScratchpadFactory;
 import org.mpi.vasco.txstore.scratchpad.ScratchpadException;
 
 import org.mpi.vasco.network.messages.MessageBase;
-import org.mpi.vasco.network.messages.ObjectPool;
 import org.mpi.vasco.network.netty.NettyTCPSender;
 import org.mpi.vasco.network.netty.NettyTCPReceiver;
 import org.mpi.vasco.network.PassThroughNetworkQueue;

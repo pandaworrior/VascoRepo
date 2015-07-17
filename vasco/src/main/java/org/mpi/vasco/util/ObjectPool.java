@@ -14,7 +14,7 @@
  * Contact:
  *     chengli@mpi-sws.org    
  *******************************************************************************/
-package org.mpi.vasco.network.messages;
+package org.mpi.vasco.util;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -61,6 +61,10 @@ public class ObjectPool<T> {
 	 */
 	public void returnObject(T obj){
 		objectList.add(obj);
+	}
+	
+	public int numOfObject(){
+		return this.objectList.size();
 	}
 
 }
