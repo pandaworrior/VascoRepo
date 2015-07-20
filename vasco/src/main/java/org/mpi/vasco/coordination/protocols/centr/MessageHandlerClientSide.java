@@ -77,7 +77,6 @@ public class MessageHandlerClientSide extends BaseNode{
 	
 	static int counterPerClient = 0;
 	public LockReqMessage generateRandomRequestMessage(){
-		Debug.println("Randomly generate a request message\n");
 		ProxyTxnId txnId = new ProxyTxnId(0, 0, counterPerClient++);
 		LockRequest lr = new LockRequest(RandomStringUtils.randomAlphabetic(5).toLowerCase());
 		Random random = new Random();
@@ -85,14 +84,19 @@ public class MessageHandlerClientSide extends BaseNode{
 		Debug.printf("Generate %d key groups\n", numOfKeyGroups);
 		for(int i = 0; i < numOfKeyGroups; i++){
 			String keyGroupStr = RandomStringUtils.randomAlphabetic(10).toLowerCase();
-			int numOfKeys = random.nextInt(10);
+			int numOfKeys = random.nextInt(10) + 1;
 			while(numOfKeys > 0){
 				String keyStr = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+				if(keyStr.equalsIgnoreCase("")){
+					throw new RuntimeException("You generated an empty string\n");
+				}
 				numOfKeys--;
 				lr.addKey(keyGroupStr, keyStr);
 			}
 		}
 		LockReqMessage msg = new LockReqMessage(txnId, myId, lr);
+		Debug.println("Randomly generate a request message\n");
+		Debug.println(msg.toString());
 		return msg;
 	}
 	

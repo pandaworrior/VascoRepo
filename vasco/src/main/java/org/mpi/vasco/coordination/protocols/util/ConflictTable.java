@@ -35,18 +35,29 @@ import org.mpi.vasco.util.debug.Debug;
  */
 public class ConflictTable {
 
-	/** The all conflicts. Not thread-safe, but it is fine since it is not modified at runtime*/
-	HashMap<String, Conflict> allConflicts;
+	/** The all symmetry conflicts. Not thread-safe, but it is fine since it is not modified at runtime*/
+	HashMap<String, Conflict> symConflicts;
+	HashMap<String, Conflict> asymConflicts;
+	
+	public final static byte CONFLICT_INDEX_SYM = 0;
+	public final static byte CONFLICT_INDEX_ASYM = 1;
 	
 	private final static String CONFLICT_COLLECTION_STR = "collectionOfConflicts";
 	private final static String CONFLICT_NUM_STR = "numOfConflicts";
 	private final static String CONFLICT_STR = "conflict";
+	private final static String CONFLICT_TYPE_STR = "type";
+	private final static String ASYMMETRY_CONFLICT_STR = "asymmetry";
+	private final static String SYMMETRY_CONFLICT_STR = "symmetry";
+	
 	private final static String LEFT_OPERANT_STR = "leftOperand";
 	private final static String RIGHT_OPERANT_STR = "rightOperand";
-	
+	private final static String BARRIER_STR = "barrier";
+	private final static String YES_STR = "yes";
+	private final static String NO_STR = "no";
 	
 	public ConflictTable(String xmlFile){
-		this.setAllConflicts(new HashMap<String, Conflict>());
+		this.setSymConflicts(new HashMap<String, Conflict>());
+		this.setAsymConflicts(new HashMap<String, Conflict>());
 		this.readFromXml(xmlFile);
 	}
 	
@@ -80,12 +91,18 @@ public class ConflictTable {
 				    	Iterator<Attribute> attributes = startElement.getAttributes();
 				    	String leftOpName = null;
 				    	String rightOpName = null;
+				    	String type = null;
+				    	String barrierStr = null;
 				    	while (attributes.hasNext()) {
 				    		Attribute attribute = attributes.next();
-							if (attribute.getName().toString().equals(LEFT_OPERANT_STR)){
+				    		if (attribute.getName().toString().equals(CONFLICT_TYPE_STR)){
+				    			type = attribute.getValue();
+				    		}else if(attribute.getName().toString().equals(LEFT_OPERANT_STR)){
 				    			leftOpName = attribute.getValue();
 							}else if (attribute.getName().toString().equals(RIGHT_OPERANT_STR)){
 								rightOpName = attribute.getValue();
+							}else if(attribute.getName().toString().equals(BARRIER_STR)){
+								barrierStr = attribute.getValue();
 							}else
 								throw new RuntimeException("invalid attribute");
 				    	}
@@ -93,7 +110,19 @@ public class ConflictTable {
 				    			rightOpName == null){
 				    		throw new RuntimeException("Either left op name or right op name is not set");
 				    	}
-				    	this.addConflict(leftOpName, rightOpName);
+				    	
+				    	if(type.equals(ASYMMETRY_CONFLICT_STR)){
+				    		Debug.println("here we check conflict str type");
+				    		if(barrierStr.equals(YES_STR)){
+				    			this.addAsymConflict(leftOpName, rightOpName, true);
+				    		}else{
+				    			this.addAsymConflict(leftOpName, rightOpName, false);
+				    		}
+				    	}else if(type.equals(SYMMETRY_CONFLICT_STR)){
+				    		this.addSymConflict(leftOpName, rightOpName);
+				    	}else{
+				    		throw new RuntimeException("No such conflict type " + type + "\n" );
+				    	}
 				    }
 				}
 			}
@@ -105,53 +134,89 @@ public class ConflictTable {
 		    
 		    in.close();
 		} catch(Exception e){
-		    throw new RuntimeException(e);
+		    e.printStackTrace();
+		    System.exit(-1);
 		}
 	}
 	
-	public void addConflict(String opName1, String opName2){
-		Conflict c1 = this.getConflictByOpName(opName1);
-		Conflict c2 = this.getConflictByOpName(opName2);
+	public void addSymConflict(String opName1, String opName2){
+		Conflict c1 = this.getConflictByOpName(opName1, CONFLICT_INDEX_SYM);
+		Conflict c2 = this.getConflictByOpName(opName2, CONFLICT_INDEX_SYM);
 		c1.addConflict(opName2);
 		c2.addConflict(opName1);
 	}
 	
-	public Conflict getConflictByOpName(String opName){
-		Conflict c = this.getAllConflicts().get(opName);
-		if(c == null){
-			c = new Conflict(opName);
-			this.allConflicts.put(opName, c);
+	public void addAsymConflict(String opName1, String opName2, boolean barrier){
+		Conflict c1 = this.getConflictByOpName(opName1, CONFLICT_INDEX_ASYM);
+		Conflict c2 = this.getConflictByOpName(opName2, CONFLICT_INDEX_ASYM);
+		c1.addConflict(opName2);
+		c2.addConflict(opName1);
+		if(barrier){
+			c1.setBarrier(true);
 		}
+	}
+	
+	public Conflict getConflictByOpName(String opName, byte conflictType){
+		Conflict c = null;
+		
+		switch(conflictType){
+		case CONFLICT_INDEX_ASYM:
+			c= this.getAsymConflicts().get(opName);
+			if(c == null){
+				c = new Conflict(opName);
+				this.asymConflicts.put(opName, c);
+			}
+			break;
+		case CONFLICT_INDEX_SYM:
+			c = this.getSymConflicts().get(opName);
+			if(c == null){
+				c = new Conflict(opName);
+				this.symConflicts.put(opName, c);
+			}
+			break;
+			default:
+				throw new RuntimeException("No such conflict type " + conflictType);
+		}
+
 		return c;
-	}
-
-	public HashMap<String, Conflict> getAllConflicts() {
-		return allConflicts;
-	}
-
-	public void setAllConflicts(HashMap<String, Conflict> allConflicts) {
-		this.allConflicts = allConflicts;
 	}
 	
 	public int getNumOfConflicts(){
 		int numOfConflicts = 0;
-		Iterator it = this.getAllConflicts().entrySet().iterator();
-		while(it.hasNext()){
-			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it.next();
+		Iterator it1 = this.getSymConflicts().entrySet().iterator();
+		while(it1.hasNext()){
+			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it1.next();
+			numOfConflicts += e.getValue().size();
+		}
+		
+		Iterator it2 = this.getAsymConflicts().entrySet().iterator();
+		while(it2.hasNext()){
+			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it2.next();
 			numOfConflicts += e.getValue().size();
 		}
 		return numOfConflicts;
 	}
 	
 	public String toString(){
-		StringBuilder strB = new StringBuilder();
-		Iterator it = this.getAllConflicts().entrySet().iterator();
-		while(it.hasNext()){
-			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it.next();
+		StringBuilder strB = new StringBuilder("Sym conflicts \n");
+		Iterator it1 = this.getSymConflicts().entrySet().iterator();
+		while(it1.hasNext()){
+			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it1.next();
 			strB.append("\t");
 			strB.append(e.getValue().toString());
 			strB.append("\n");
 		}
+		
+		strB.append("Asym conflicts \n");
+		Iterator it2 = this.getAsymConflicts().entrySet().iterator();
+		while(it2.hasNext()){
+			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it2.next();
+			strB.append("\t");
+			strB.append(e.getValue().toString());
+			strB.append("\n");
+		}
+		
+		
 		return strB.toString();
 	}
 	
@@ -159,6 +224,22 @@ public class ConflictTable {
 		Debug.println("-----------> Conflict table<---------------\n");
 		Debug.println(this.toString());
 		Debug.println("-----------> End of printing Conflict table <--------------");
+	}
+	
+	public HashMap<String, Conflict> getSymConflicts() {
+		return symConflicts;
+	}
+
+	public void setSymConflicts(HashMap<String, Conflict> symConflicts) {
+		this.symConflicts = symConflicts;
+	}
+
+	public HashMap<String, Conflict> getAsymConflicts() {
+		return asymConflicts;
+	}
+
+	public void setAsymConflicts(HashMap<String, Conflict> asymConflicts) {
+		this.asymConflicts = asymConflicts;
 	}
 	
 	public static void main(String[] args){

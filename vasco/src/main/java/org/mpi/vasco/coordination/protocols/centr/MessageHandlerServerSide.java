@@ -13,6 +13,7 @@ import java.util.Set;
 import org.apache.commons.lang3.RandomUtils;
 import org.mpi.vasco.coordination.BaseNode;
 import org.mpi.vasco.coordination.membership.Role;
+import org.mpi.vasco.coordination.protocols.centr.rsm.CounterService;
 import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
 import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
 import org.mpi.vasco.coordination.protocols.messages.MessageFactory;
@@ -34,11 +35,13 @@ public class MessageHandlerServerSide extends BaseNode{
 	/** The Constant serialVersionUID. */
 	private static final long serialVersionUID = -7157915157725026251L;
 	
+	private String memFile;
+	
 	/** The mf. */
 	private static MessageFactory mf = new MessageFactory();
 	
 	/** The rsm lock service. */
-	private ReplicatedLockService rsmLockService;
+	private CounterService rsmLockService;
 
 	/**
 	 * Instantiates a new message handler server side.
@@ -51,7 +54,7 @@ public class MessageHandlerServerSide extends BaseNode{
 			Role myRole, int myId) {
 		super(membershipFile, myRole, myId);
 		this.setRsmLockService(null);
-		Debug.printf("Set up the server %d for lock client", myId);
+		this.memFile = membershipFile;
 	}
 
 	/* (non-Javadoc)
@@ -91,11 +94,11 @@ public class MessageHandlerServerSide extends BaseNode{
 	}
 	
 	/**
-	 * Process.
+	 * Process for test
 	 *
 	 * @param msg the msg
 	 */
-	private void process(LockReqMessage msg){
+	/*private void process(LockReqMessage msg){
 		Debug.printf("Receive from client %d a lock request message %s\n", msg.getGlobalProxyId(), msg.toString());
 		//call
 		//if(this.getRsmLockService() == null){
@@ -109,6 +112,33 @@ public class MessageHandlerServerSide extends BaseNode{
 			mf.returnLockReqMessage(msg);
 			mf.returnLockRepMessage(repMsg);
 		//}
+	}*/
+	
+	/**
+	 * Process.
+	 *
+	 * @param msg the msg
+	 */
+	private void process(LockReqMessage msg){
+		Debug.printf("Receive from client %d a lock request message %s\n", msg.getGlobalProxyId(), msg.toString());
+		if(this.getRsmLockService() == null){
+			throw new RuntimeException("RSM is not set");
+		}else{
+			//LockRepMessage repMsg = this.getRsmLockService().put(msg.getProxyTxnId().toString(), msg.getLockReq());
+			LockRepMessage repMsg = null;
+			LockReply reply = null;
+			try {
+				reply = this.getRsmLockService().getAndAdd(msg.getLockReq());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			repMsg = new LockRepMessage(msg.getProxyTxnId(), reply);
+			int clientId = msg.getGlobalProxyId();
+			this.sendToLockClient(repMsg, clientId);
+			Debug.printf("Send to lock client with id %d lock reply message %s", clientId, repMsg.toString());
+			mf.returnLockReqMessage(msg);
+			mf.returnLockRepMessage(repMsg);
+		}
 	}
 
 	/* (non-Javadoc)
@@ -116,8 +146,19 @@ public class MessageHandlerServerSide extends BaseNode{
 	 */
 	@Override
 	public void setUp() {
-		// TODO Auto-generated method stub
+		// set up for outgoing messages
+		NettyTCPSender sendNet = new NettyTCPSender();
+		this.setSender(sendNet);
+		sendNet.setTCPNoDelay(false);
+		sendNet.setKeepAlive(true);
 		
+		int threadCount = 2;
+		ParallelPassThroughNetworkQueue ptnq = new ParallelPassThroughNetworkQueue(
+				this, threadCount);
+		NettyTCPReceiver rcv = new NettyTCPReceiver(this.getMembership().getMe()
+				.getInetSocketAddress(), ptnq, threadCount);
+		
+		Debug.printf("Set up the server %d for lock client", myId);
 	}
 
 	/**
@@ -125,7 +166,7 @@ public class MessageHandlerServerSide extends BaseNode{
 	 *
 	 * @return the rsm lock service
 	 */
-	public ReplicatedLockService getRsmLockService() {
+	public CounterService getRsmLockService() {
 		return rsmLockService;
 	}
 
@@ -134,8 +175,9 @@ public class MessageHandlerServerSide extends BaseNode{
 	 *
 	 * @param rsmLockService the new rsm lock service
 	 */
-	public void setRsmLockService(ReplicatedLockService rsmLockService) {
+	public void setRsmLockService(CounterService rsmLockService) {
 		this.rsmLockService = rsmLockService;
+		Debug.println("Set rsm lock service");
 	}
 	
 	/**

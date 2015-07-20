@@ -30,6 +30,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.jgroups.util.Bits;
+import org.jgroups.util.ByteArrayDataInputStream;
+
 /**
  * The Class LockRequest.
  */
@@ -73,11 +76,30 @@ public class LockRequest{
 		try {
 			this.decode();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.exit(-1);
 		}
 	}
+	
+	public LockRequest(byte[] b, int offset, int length) {
+		this.setArr(new byte[length]);
+		System.arraycopy(b, offset, this.getArr(), 0, length);
+		try {
+			this.decode();
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+	}
+	
+	/*public LockRequest(ByteArrayDataInputStream in){
+		try {
+			this.readFromByteArrayInputStream(in);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+	}*/
 
 	/**
 	 * Gets the op name.
@@ -168,6 +190,22 @@ public class LockRequest{
 			numOfKeyGroups--;
 		}
 	}
+	
+	/*private void readFromByteArrayInputStream(ByteArrayDataInputStream in) throws IOException{
+		this.setOpName(Bits.readString(in));
+		int numOfKeyGroups = Bits.readInt(in);
+		this.setKeyList(new HashMap<String, Set<String>>());
+		while(numOfKeyGroups > 0){
+			String keyGroupStr = Bits.readString(in);
+			int numOfKeys = Bits.readInt(in);
+			while(numOfKeys > 0){
+				String keyStr = Bits.readString(in);
+				this.addKey(keyGroupStr, keyStr);
+				numOfKeys--;
+			}
+			numOfKeyGroups--;
+		}
+	}*/
 	
 	private void encode() throws IOException{
 		if(this.getArr() == null){

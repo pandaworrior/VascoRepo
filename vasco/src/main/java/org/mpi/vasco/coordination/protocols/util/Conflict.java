@@ -25,10 +25,12 @@ import java.util.Set;
 public class Conflict {
 	String opName;
 	Set<String> confList;
+	boolean isBarrier;// true => in this restriction, the other part is the barrier
 	
 	public Conflict(String _opName){
 		this.setOpName(_opName);
 		this.setConfList(new HashSet<String>());
+		this.setBarrier(false);
 	}
 
 	public String getOpName() {
@@ -63,8 +65,17 @@ public class Conflict {
 			strBuild.append(confName);
 			strBuild.append(",");
 		}
-		strBuild.deleteCharAt(strBuild.length() - 1);
+		//strBuild.deleteCharAt(strBuild.length() - 1);
+		strBuild.append(isBarrier);
 		strBuild.append("}>");
 		return strBuild.toString();
+	}
+
+	public boolean isBarrier() {
+		return isBarrier;
+	}
+
+	public void setBarrier(boolean isBarrier) {
+		this.isBarrier = isBarrier;
 	}
 }

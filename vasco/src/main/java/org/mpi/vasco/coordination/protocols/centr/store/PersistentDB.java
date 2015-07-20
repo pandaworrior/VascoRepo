@@ -17,19 +17,21 @@
 package org.mpi.vasco.coordination.protocols.centr.store;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-// TODO: Auto-generated Javadoc
+import org.mpi.vasco.util.ObjectPool;
+
 /**
  * The Class PersistentDB.
  */
 public abstract class PersistentDB{
 	
 	/** The con. */
-	Connection con;
+	ObjectPool<Connection> conPool;
 	
 	/** The url. */
 	String url;
@@ -42,9 +44,6 @@ public abstract class PersistentDB{
 	
 	/** The str build. */
 	StringBuilder strBuild;
-	
-	/** The stmt. */
-	Statement stmt;
 	
 	/** The Constant log. */
 	private static final Logger log = Logger.getLogger( PersistentDB.class.getName() );
@@ -62,6 +61,7 @@ public abstract class PersistentDB{
 		this.setUsername(_username);
 		this.setPasswd(_passwd);
 		this.setStrBuild(new StringBuilder());
+		this.setConPool(new ObjectPool<Connection>());
 	}
 
 	/**
@@ -70,21 +70,13 @@ public abstract class PersistentDB{
 	 * @return the con
 	 */
 	public Connection getCon() {
-		return con;
-	}
-
-	/**
-	 * Sets the con.
-	 *
-	 * @param con the new con
-	 */
-	public void setCon(Connection con) {
-		this.con = con;
+		Connection conn = this.getConPool().borrowObject();
+		return conn;
 	}
 
 	/**
 	 * Gets the url.
-	 *
+	 *et
 	 * @return the url
 	 */
 	public String getUrl() {
@@ -122,7 +114,7 @@ public abstract class PersistentDB{
 	 * Gets the passwd.
 	 *
 	 * @return the passwd
-	 */
+	 */	
 	public String getPasswd() {
 		return passwd;
 	}
@@ -154,21 +146,15 @@ public abstract class PersistentDB{
 		this.strBuild = strBuild;
 	}
 
-	/**
-	 * Gets the stmt.
-	 *
-	 * @return the stmt
-	 */
-	public Statement getStmt() {
-		return stmt;
+	public ObjectPool<Connection> getConPool() {
+		return conPool;
 	}
 
-	/**
-	 * Sets the stmt.
-	 *
-	 * @param stmt the new stmt
-	 */
-	public void setStmt(Statement stmt) {
-		this.stmt = stmt;
+	public void setConPool(ObjectPool<Connection> conPool) {
+		this.conPool = conPool;
+	}
+	
+	public void returnConn(Connection conn){
+		this.conPool.returnObject(conn);
 	}
 }

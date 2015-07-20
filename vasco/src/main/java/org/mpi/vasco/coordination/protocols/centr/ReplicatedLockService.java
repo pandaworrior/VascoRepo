@@ -1,76 +1,131 @@
-/*******************************************************************************
- * Copyright (c) 2015 Dependable Cloud Group and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     Dependable Cloud Group - initial API and implementation
- *
- * Creator:
- *     Cheng Li
- *
- * Contact:
- *     chengli@mpi-sws.org    
- *******************************************************************************/
 package org.mpi.vasco.coordination.protocols.centr;
 
 import org.jgroups.JChannel;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
-import org.jgroups.jmx.JmxConfigurator;
-import org.jgroups.protocols.raft.ELECTION;
-import org.jgroups.protocols.raft.RAFT;
-import org.jgroups.protocols.raft.Role;
-import org.jgroups.raft.blocks.ReplicatedStateMachine;
+import org.jgroups.protocols.raft.*;
 import org.jgroups.util.Util;
-import org.mpi.vasco.coordination.protocols.centr.store.H2DBInstance;
-import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
-import org.mpi.vasco.coordination.protocols.util.LockRequest;
-import org.mpi.vasco.txstore.util.ProxyTxnId;
+import org.mpi.vasco.coordination.membership.Role;
+import org.mpi.vasco.coordination.protocols.centr.rsm.CounterService;
+import org.mpi.vasco.coordination.protocols.util.ConflictTable;
 
 /**
- * The Class ReplicatedLockService.
- * TODO: add a DB Instance here, and start the DB instance before config the raft cluster
- * TODO: DB execute txn when put finishes
- * TODO: add a netty connection here and receive the message from clients
- * TODO: define a message for acquiring locks
+ * Demo of CounterService. When integrating with JGroups, this class should be removed and the original demo in JGroups
+ * should be modified to accept different CounterService implementations.
  */
-public class ReplicatedLockService extends ReceiverAdapter implements RAFT.RoleChange {
-    protected JChannel                              ch;
-    protected ReplicatedStateMachine<String, LockRequest> rsm;//String is the string format of ProxyTxnId
-    protected MessageHandlerServerSide communicatorForClient;	
-    protected H2DBInstance h2DB;
+public class ReplicatedLockService {
+    protected JChannel       ch;
+    protected CounterService counter_service;
+    protected MessageHandlerServerSide server_for_clients;
 
-    protected void start(String props, String name, boolean follower, long timeout) throws Exception {
+    void start(String props, String name, long repl_timeout, boolean follower, String xmlFile, int myId) throws Exception {
         ch=new JChannel(props).name(name);
-        rsm=new ReplicatedStateMachine<>(ch).raftId(name).timeout(timeout);
+        counter_service=new CounterService(ch).raftId(name).replTimeout(repl_timeout);
         if(follower)
             disableElections(ch);
-        ch.setReceiver(this);
+        ch.setReceiver(new ReceiverAdapter() {
+            public void viewAccepted(View view) {
+                System.out.println("-- view: " + view);
+            }
+        });
 
-        try {
-            ch.connect("rsm");
-            Util.registerChannel(rsm.channel(), "rsm");
-            rsm.addRoleChangeListener(this);
-            rsm.addNotificationListener(new ReplicatedStateMachine.Notification<String,Object>() {
-                @Override
-                public void put(String key, Object val, Object old_val) {
-                    System.out.printf("-- put(%s, %s) -> %s\n", key, val, old_val);
-                }
+        //try {
+            ch.connect("cntrs");
+            //loop();
+        //}
+        //finally {
+          //  Util.close(ch);
+        //}
+        
+        //set the conflictable
+        counter_service.setConflictTable(new ConflictTable(xmlFile));
+        
+        //set the lock server
+        server_for_clients = new MessageHandlerServerSide(xmlFile, Role.LOCKSERVER, myId);
+        server_for_clients.setUp();
+        server_for_clients.setRsmLockService(this.counter_service);
+    }
 
-                @Override
-                public void remove(String key, Object old_val) {
-                    System.out.printf("-- remove(%s) -> %s\n", key, old_val);
+
+
+    /*protected void loop() throws Exception {
+        boolean looping=true;
+        while(looping) {
+            try {
+                int key=Util.keyPress("[1] GetAndUpdate [2] Decrement [3] Compare and set [4] Dump log\n" +
+                                        "[8] Snapshot [9] Increment N times [x] Exit\n" +
+                                        "first-applied=" + firstApplied() +
+                                        ", last-applied=" + counter_service.lastApplied() +
+                                        ", commit-index=" + counter_service.commitIndex() +
+                                        ", log size=" + Util.printBytes(logSize()) + "\n");
+
+                switch(key) {
+                    case '1':
+                        long val=counter.incrementAndGet();
+                        System.out.printf("%s: %s\n", counter.getName(), val);
+                        break;
+                    case '2':
+                        val=counter.decrementAndGet();
+                        System.out.printf("%s: %s\n", counter.getName(), val);
+                        break;
+                    case '3':
+                        long expect=Util.readLongFromStdin("expected value: ");
+                        long update=Util.readLongFromStdin("update: ");
+                        if(counter.compareAndSet(expect, update)) {
+                            System.out.println("-- set counter \"" + counter.getName() + "\" to " + update + "\n");
+                        }
+                        else {
+                            System.err.println("failed setting counter \"" + counter.getName() + "\" from " + expect +
+                                                 " to " + update + ", current value is " + counter.get() + "\n");
+                        }
+                        break;
+                    case '4':
+                        dumpLog();
+                        break;
+                    case '8':
+                        counter_service.snapshot();
+                        break;
+                    case '9':
+                        int NUM=Util.readIntFromStdin("num: ");
+                        System.out.println("");
+                        int print=NUM / 10;
+                        long retval=0;
+                        long start=System.currentTimeMillis();
+                        for(int i=0; i < NUM; i++) {
+                            retval=counter.incrementAndGet();
+                            if(i > 0 && i % print == 0)
+                                System.out.println("-- count=" + retval);
+                        }
+                        long diff=System.currentTimeMillis() - start;
+                        System.out.println("\n" + NUM + " incrs took " + diff + " ms; " + (NUM / (diff / 1000.0)) + " ops /sec\n");
+                        break;
+                    case 'x':
+                        looping=false;
+                        break;
+                    case '\n':
+                        System.out.println(counter.getName() + ": " + counter.get() + "\n");
+                        break;
                 }
-            });
-            loop();
-            JmxConfigurator.unregisterChannel(rsm.channel(), Util.getMBeanServer(), "rsm");
+            }
+            catch(Throwable t) {
+                System.err.println(t.toString());
+            }
         }
-        finally {
-            Util.close(ch);
-        }
+    }*/
+
+    /*protected void dumpLog() {
+        System.out.println("\nindex (term): command\n---------------------");
+        counter_service.dumpLog();
+        System.out.println("");
+    }*/
+
+    protected int firstApplied() {
+        RAFT raft=(RAFT)ch.getProtocolStack().findProtocol(RAFT.class);
+        return raft.log().firstAppended();
+    }
+
+    protected int logSize() {
+        return counter_service.logSize();
     }
 
     protected static void disableElections(JChannel ch) {
@@ -79,146 +134,28 @@ public class ReplicatedLockService extends ReceiverAdapter implements RAFT.RoleC
             election.noElections(true);
     }
 
-    /*
-    protected void loop() {
-        boolean looping=true;
-        while(looping) {
-            int input=Util.keyPress("[1] add [2] get [3] remove [4] show all [5] dump log [6] snapshot [x] exit\n" +
-                                      "first-applied=" + firstApplied() +
-                                      ", last-applied=" + rsm.lastApplied() +
-                                      ", commit-index=" + rsm.commitIndex() +
-                                      ", log size=" + Util.printBytes(logSize()) + "\n");
-            switch(input) {
-                case '1':
-                    put(read("key"), read("value"));
-                    break;
-                case '2':
-                    get(read("key"));
-                    break;
-                case '3':
-                    remove(read("key"));
-                    break;
-                case '4':
-                    System.out.println(rsm + "\n");
-                    break;
-                case '5':
-                    dumpLog();
-                    break;
-                case '6':
-                    try {
-                        rsm.snapshot();
-                    }
-                    catch(Exception e) {
-                        e.printStackTrace();
-                    }
-                    break;
-                case 'x':
-                    looping=false;
-                    break;
-            }
-        }
-    }*/
 
-    //Cheng: have to setting in a loop and wait for the message sent by the client
-    protected void loop() {
+
+    public static void main(final String[] args) throws Exception {
+    	if(args.length != 6){
+    		help();
+    		return;
+    	}
     	
-    }
-    
-    protected LockRepMessage put(String key, LockRequest value) {
-        if(key == null || value == null) {
-            System.err.printf("Key (%s) or value (%s) is null\n",key, value);
-            return null;
-        }
-        //synchronize on rsm
-        synchronized(rsm){
-	        try {
-	            rsm.put(key, value);
-	            //execute the db query here
-	        }
-	        catch(Throwable t) {
-	            System.err.println("failed setting " + key + "=" + value + ": " + t);
-	        }
-        }
-        
-        //generate a message here
-        return null;
+    	String raftFile = args[0];
+    	String raftName = args[1];
+    	long repl_timeout = Long.parseLong(args[2]);
+    	boolean follower = Boolean.parseBoolean(args[3]);
+    	String serverclientXml = args[4];
+    	int myId = Integer.parseInt(args[5]);
+        new ReplicatedLockService().start(raftFile, raftName, repl_timeout, follower, serverclientXml, myId);
+
     }
 
-    protected void get(String key) {
-        Object val=rsm.get(key);
-        System.out.printf("-- get(%s) -> %s\n", key, val);
+    private static void help() {
+        System.out.println("CounterServiceDemo [raftfile] [raftname] " +
+                             "[timeout] [follower(true or false)] [serverclientxmlfile] [myId]");
     }
 
-    protected void remove(String key) {
-        try {
-            rsm.remove(key);
-        }
-        catch(Exception ex) {
-            System.err.println("failed removing " + key + ": " + ex);
-        }
-    }
-
-    protected static String read(String name) {
-        try {
-            return Util.readStringFromStdin(name + ": ");
-        }
-        catch(Exception e) {
-            return null;
-        }
-    }
-
-    protected int firstApplied() {
-        RAFT raft=(RAFT)rsm.channel().getProtocolStack().findProtocol(RAFT.class);
-        return raft.log().firstApplied();
-    }
-
-    protected int logSize() {
-        return rsm.logSize();
-    }
-
-    protected void dumpLog() {
-        System.out.println("\nindex (term): command\n---------------------");
-        rsm.dumpLog();
-        System.out.println("");
-    }
-
-    @Override
-    public void viewAccepted(View view) {
-        System.out.println("-- view change: " + view);
-    }
-
-    @Override
-    public void roleChanged(Role role) {
-        System.out.println("-- changed role to " + role);
-    }
-
-    public static void main(String[] args) throws Exception {
-        String props="raft.xml";
-        String name=null;
-        boolean follower=false;
-        long timeout=3000;
-
-        for(int i=0; i < args.length; i++) {
-            if(args[i].equals("-props")) {
-                props=args[++i];
-                continue;
-            }
-            if(args[i].equals("-name")) {
-                name=args[++i];
-                continue;
-            }
-            if(args[i].equals("-follower")) {
-                follower=true;
-                continue;
-            }
-            if(args[i].equals("-timeout")) {
-                timeout=Long.parseLong(args[++i]);
-                continue;
-            }
-            System.out.println("ReplicatedStateMachine [-props <config>] [-name <name>] [-follower] [-timeout timeout]");
-            return;
-        }
-        new ReplicatedLockService().start(props, name, follower, timeout);
-    }
 
 }

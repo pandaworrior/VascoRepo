@@ -26,7 +26,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-// TODO: Auto-generated Javadoc
+import org.mpi.vasco.util.debug.Debug;
+
 /**
  * The Class H2DBInstance.
  */
@@ -44,23 +45,29 @@ public class H2DBInstance extends PersistentDB implements PersistentDBImpl{
 	 */
 	H2DBInstance(String _url, String _username, String _passwd) {
 		super(_url, _username, _passwd);
-		try {
-			init();
-		} catch (ClassNotFoundException | SQLException e) {
-			e.printStackTrace();
-			log.log(Level.SEVERE, e.toString());
-		}
+		init();
 		log.log(Level.CONFIG, "H2DBInstance has been successfully launched!");
 	}
 
 	/* (non-Javadoc)
-	 * @see org.mpi.vasco.coordination.protocols.centr.store.PersistentDBImpl#createConn()
+	 * @see org.mpi.vasco.coordination.protocols.centr.store.PersistentconnDBImpl#createConn()
 	 */
 	@Override
-	public Connection createConn() throws ClassNotFoundException, SQLException {
-		Class.forName("org.h2.Driver");
-        Connection c = DriverManager.
-            getConnection(super.getUrl(), super.getUsername(), super.getPasswd());
+	public Connection createConn(){
+		Connection c = null;
+		try {
+			Class.forName("org.h2.Driver");
+			c = DriverManager.
+		            getConnection(super.getUrl(), super.getUsername(), super.getPasswd());
+			this.disableAutoCommit(c);
+			this.setIsolationLevel(c);
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 		return c;
 	}
 
@@ -68,18 +75,15 @@ public class H2DBInstance extends PersistentDB implements PersistentDBImpl{
 	 * @see org.mpi.vasco.coordination.protocols.centr.store.PersistentDBImpl#init()
 	 */
 	@Override
-	public void init() throws ClassNotFoundException, SQLException {
-		super.setCon(createConn());
-		super.setStmt(createStmt());
-		this.disableAutoCommit();
-		this.setIsolationLevel();
+	public void init(){
+		this.createConnInBatch(20);
 	}
 
 	/* (non-Javadoc)
 	 * @see org.mpi.vasco.coordination.protocols.centr.store.PersistentDBImpl#executeTxn(java.lang.String)
 	 */
 	@Override
-	public ResultSet executeTxn(String sql) {
+	public ResultSet executeReadTxn(String sql) {// TODO Auto-generated catch block
 		log.log(Level.SEVERE, "Not implemented yet");
 		return null;
 	}
@@ -89,29 +93,37 @@ public class H2DBInstance extends PersistentDB implements PersistentDBImpl{
 	 */
 	@Override
 	public ResultSet executeTxnInBatch(String readSql, List<String> writeSql) {
+		Connection conn;
+		conn = this.getRealConn();
 		ResultSet rs = null;
-		
+		Statement st = this.createStmt(conn);
 		for(;;){
 			try {
-				rs = super.getStmt().executeQuery(readSql);
+				rs = st.executeQuery(readSql);
+				st.clearBatch();
 				
 				assert(writeSql.size() >= 1);
 				
 				for(int i = 0; i < writeSql.size();i++){
-					super.getStmt().addBatch(writeSql.get(i));
+					st.addBatch(writeSql.get(i));
 				}
 				
-				super.getStmt().executeBatch();
-				
-				super.getCon().commit();
+				st.executeBatch();
+				conn.commit();
 				break;
 				
 			} catch (SQLException e) {
 				log.log(Level.SEVERE, "Problem when executing txn " + e.toString());
+				try {
+					conn.rollback();
+				} catch (SQLException e1) {
+					e1.printStackTrace();
+					System.exit(-1);
+				}
 			}finally{
 				try {
 					rs.close();
-					super.con.rollback();
+					st.close();
 				} catch (SQLException e) {
 					log.log(Level.SEVERE, "Problem when clear up txn " + e.toString());
 				}
@@ -122,28 +134,75 @@ public class H2DBInstance extends PersistentDB implements PersistentDBImpl{
 	}
 
 	/* (non-Javadoc)
-	 * @see org.mpi.vasco.coordination.protocols.centr.store.PersistentDBImpl#disableAutoCommit()
+	 * @see org.mpi.vasco.coordination.protocols.centr.store.PersisargstentDBImpl#disableAutoCommit()
 	 */
 	@Override
-	public void disableAutoCommit() throws SQLException {
-		super.con.setAutoCommit(false);
+	public void disableAutoCommit(Connection conn) {
+		try {
+			conn.setAutoCommit(false);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see org.mpi.vasco.coordination.protocols.centr.store.PersistentDBImpl#setIsolationLevel()
 	 */
 	@Override
-	public void setIsolationLevel() throws SQLException{
+	public void setIsolationLevel(Connection conn){
 		String sql = "SET LOCK_MODE 1";
-		super.getStmt().execute(sql);
+		Statement st = this.createStmt(conn);
+		try {
+			st.execute(sql);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+	}
+	
+	private void createConnInBatch(int numOfConn){
+		Debug.printf("Create %d connections\n", numOfConn);
+		while(numOfConn > 0){
+			numOfConn--;
+			Connection conn = this.createConn();
+			this.returnConn(conn);
+		}
+	}
+	
+	private Connection getRealConn(){
+		Connection conn = super.getCon();
+		if(conn == null){
+			Debug.printf("Create a new connection and the num of connection %d\n", this.getConPool().numOfObject());
+			conn = this.createConn();
+		}
+		return conn;
 	}
 
-	/* (non-Javadoc)
-	 * @see org.mpi.vasco.coordination.protocols.centr.store.PersistentDBImpl#createStmt()
-	 */
 	@Override
-	public Statement createStmt() throws SQLException {
-		return super.getCon().createStatement();
+	public Statement createStmt(Connection conn) {
+		Statement st = null;
+		try {
+			st = conn.createStatement();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		return st;
+	}
+
+	@Override
+	public int executeUpdateTxn(String sql) {
+		Connection conn = this.getRealConn();
+		int result = -1;
+		Statement st = this.createStmt(conn);
+		try {
+			result = st.executeUpdate(sql);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		return result;
 	}
 
 }

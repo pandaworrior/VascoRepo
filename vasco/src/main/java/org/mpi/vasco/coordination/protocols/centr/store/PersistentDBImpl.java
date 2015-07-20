@@ -33,41 +33,32 @@ public interface PersistentDBImpl {
 	 * Creates the conn.
 	 *
 	 * @return the connection
-	 * @throws ClassNotFoundException the class not found exception
-	 * @throws SQLException the SQL exception
 	 */
-	Connection createConn() throws ClassNotFoundException, SQLException;
+	Connection createConn();
 	
 	/**
 	 * Creates the stmt.
 	 *
+	 * @param conn the conn
 	 * @return the statement
-	 * @throws SQLException the SQL exception
 	 */
-	Statement createStmt() throws SQLException;
+	Statement createStmt(Connection conn);
 	
 	//initialize all configuration with database
 	/**
 	 * Inits the.
-	 *
-	 * @throws ClassNotFoundException the class not found exception
-	 * @throws SQLException the SQL exception
 	 */
-	void init()throws ClassNotFoundException, SQLException;
+	void init();
 	
 	/**
 	 * Disable auto commit.
-	 *
-	 * @throws SQLException the SQL exception
 	 */
-	void disableAutoCommit() throws SQLException;
+	void disableAutoCommit(Connection conn);
 	
 	/**
 	 * Sets the isolation level.
-	 *
-	 * @throws SQLException the SQL exception
 	 */
-	void setIsolationLevel() throws SQLException;
+	void setIsolationLevel(Connection conn);
 	
 	/**
 	 * Execute txn.
@@ -75,7 +66,9 @@ public interface PersistentDBImpl {
 	 * @param sql the sql
 	 * @return the result set
 	 */
-	ResultSet executeTxn(String sql);
+	ResultSet executeReadTxn(String sql);
+	
+	int executeUpdateTxn(String sql);
 	
 	//execute this transaction in a loop, stop when it succeeds
 	/**
