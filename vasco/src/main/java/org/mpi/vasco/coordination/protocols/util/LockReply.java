@@ -35,6 +35,8 @@ public class LockReply {
 	/** The op name. */
 	String opName;
 	
+	int protocolType;
+	
 	/** The key counter map. 
 	 * key -> table name
 	 * value -> hashmap from key to counter
@@ -50,8 +52,9 @@ public class LockReply {
 	 * @param _opName the _op name
 	 * @param _keyCounterMap the _key counter map
 	 */
-	public LockReply(String _opName, HashMap<String, HashMap<String, Long>> _keyCounterMap){
+	public LockReply(String _opName, int pType, HashMap<String, HashMap<String, Long>> _keyCounterMap){
 		this.setOpName(_opName);
+		this.setProtocolType(pType);
 		this.setKeyCounterMap(_keyCounterMap);
 		this.setArr(null);
 	}
@@ -61,8 +64,9 @@ public class LockReply {
 	 *
 	 * @param _opName the _op name
 	 */
-	public LockReply(String _opName){
+	public LockReply(String _opName, int pType){
 		this.setOpName(_opName);
+		this.setProtocolType(pType);
 		this.setKeyCounterMap(new HashMap<String, HashMap<String, Long>>());
 		this.setArr(null);
 	}
@@ -145,6 +149,7 @@ public class LockReply {
 		ByteArrayInputStream bais = new ByteArrayInputStream(this.getArr());
 		DataInputStream dis = new DataInputStream(bais);
 		this.setOpName(dis.readUTF());
+		this.setProtocolType(dis.readInt());
 		int numOfKeyGroups = dis.readInt();
 		this.setKeyCounterMap(new HashMap<String, HashMap<String, Long>>());
 		while(numOfKeyGroups > 0){
@@ -168,6 +173,7 @@ public class LockReply {
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			DataOutputStream dos = new DataOutputStream(baos);
 			dos.writeUTF(this.getOpName());
+			dos.writeInt(this.getProtocolType());
 			dos.writeInt(this.getKeyCounterMap().size());
 			Iterator it = this.getKeyCounterMap().entrySet().iterator();
 			while(it.hasNext()){
@@ -232,7 +238,12 @@ public class LockReply {
 	 */
 	public String toString(){
 		StringBuilder strBuild = new StringBuilder();
-		strBuild.append("<(OpName, " + this.getOpName()+"), (keys, {");
+		strBuild.append("<(OpName, ");
+		strBuild.append(this.getOpName());
+		strBuild.append("(protocolType, ");
+		strBuild.append(this.protocolType);
+		strBuild.append("),");
+		strBuild.append("), (keys, {");
 		Iterator it = this.getKeyCounterMap().entrySet().iterator();
 		while(it.hasNext()){
 			Map.Entry<String, HashMap<String, Long>> e = (Entry<String, HashMap<String, Long>>) it.next();
@@ -254,6 +265,14 @@ public class LockReply {
 		strBuild.deleteCharAt(strBuild.length() - 1);
 		strBuild.append("})>");
 		return strBuild.toString();
+	}
+
+	public int getProtocolType() {
+		return protocolType;
+	}
+
+	public void setProtocolType(int protocolType) {
+		this.protocolType = protocolType;
 	}
 
 }

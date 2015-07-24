@@ -56,6 +56,18 @@ abstract public class BaseNode extends Throwable implements ByteHandler {
     public void sendToLockClient(Message msg, int roleId){
     	send(msg, getMembership().getPrincipal(Role.LOCKCLIENT, roleId));
     }
+    
+    public void sentToAllLockClients(Message msg){
+    	this.sentToAll(msg, Role.LOCKCLIENT);
+    }
+    
+    public void sentToAll(Message msg, Role r){
+    	Principal[] ps = this.getMembership().getAllPrincipalByRole(r);
+    	for(int i = 0; i < ps.length; i++){
+    		send(msg, ps[i]);
+    	}
+    }
+    
     private void send(Message msg, Principal rcpt){
 	if (sendNet != null)
 	    sendNet.send(msg.getBytes(), rcpt.getInetSocketAddress());

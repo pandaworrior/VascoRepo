@@ -1,15 +1,19 @@
-package org.mpi.vasco.coordination.protocols.centr;
+package org.mpi.vasco.coordination;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.mpi.vasco.coordination.BaseNode;
 import org.mpi.vasco.coordination.membership.Role;
+import org.mpi.vasco.coordination.protocols.Protocol;
 import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
 import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
 import org.mpi.vasco.coordination.protocols.messages.MessageFactory;
 import org.mpi.vasco.coordination.protocols.messages.MessageTags;
+import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.network.ParallelPassThroughNetworkQueue;
 import org.mpi.vasco.network.messages.MessageBase;
@@ -20,12 +24,11 @@ import org.mpi.vasco.util.debug.Debug;
 
 public class MessageHandlerClientSide extends BaseNode{
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = -4040510651915229397L;
 	
 	private MessageFactory mf;
+	
+	private VascoServiceAgent agent;
 
 	public MessageHandlerClientSide(String membershipFile, Role myRole, int myId) {
 		super(membershipFile, myRole, myId);
@@ -35,7 +38,6 @@ public class MessageHandlerClientSide extends BaseNode{
 
 	@Override
 	public void handle(byte[] bytes) {
-		// TODO Auto-generated method stub
 		MessageBase msg = mf.fromBytes(bytes);
 		if (msg == null) {
 			throw new RuntimeException("Should never receive a null message");
@@ -52,16 +54,31 @@ public class MessageHandlerClientSide extends BaseNode{
 	}
 
 	private void process(LockRepMessage msg) {
-		// TODO Auto-generated method stub
 		Debug.printf("Receive a lock reply message from server content %s", msg.toString());
+		LockReply lcReply = msg.getLockRly();
+		int pType = lcReply.getProtocolType();
+		Protocol p = this.getAgent().getProtocol(pType);
+		if(p == null){
+			throw new RuntimeException("No such a protocol " + lcReply.getProtocolType());
+		}
+		p.addLockReply(msg.getProxyTxnId(), lcReply);
 		mf.returnLockRepMessage(msg);
 		
 	}
 
 	@Override
 	public void setUp() {
-		// TODO Auto-generated method stub
-		
+		// set up for outgoing messages
+		NettyTCPSender sendNet = new NettyTCPSender();
+		this.setSender(sendNet);
+		sendNet.setTCPNoDelay(false);
+		sendNet.setKeepAlive(true);
+				
+		int threadCount = 2;
+		ParallelPassThroughNetworkQueue ptnq = new ParallelPassThroughNetworkQueue(
+						this, threadCount);
+		NettyTCPReceiver rcv = new NettyTCPReceiver(this.getMembership().getMe()
+						.getInetSocketAddress(), ptnq, threadCount);
 	}
 	
 	//for testing the functionalities
@@ -150,6 +167,14 @@ public class MessageHandlerClientSide extends BaseNode{
 				.getInetSocketAddress(), ptnq, threadCount);
 	
 		mClient.test();
+	}
+
+	public VascoServiceAgent getAgent() {
+		return agent;
+	}
+
+	public void setAgent(VascoServiceAgent agent) {
+		this.agent = agent;
 	}
 
 }

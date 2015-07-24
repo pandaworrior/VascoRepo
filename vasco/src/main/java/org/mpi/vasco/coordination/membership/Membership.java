@@ -199,6 +199,16 @@ public class Membership implements IMembership{
 		this.lockService = lockService;
 	}
 	
+	public Principal[] getAllPrincipalByRole(Role r){
+		if(r == Role.LOCKCLIENT){
+			return this.lockService.getLockClients();
+		}else if(r == Role.LOCKSERVER){
+			return this.lockService.getLockServers();
+		}else{
+			throw new RuntimeException("No such role " + r);
+		}
+	}
+	
 	public String getMembershipString(){
 		return this.getLockService().toString();
 	}

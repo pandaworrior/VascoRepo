@@ -1,7 +1,5 @@
 package org.mpi.vasco.coordination.membership;
 
-import japa.parser.ast.expr.ThisExpr;
-
 import org.mpi.vasco.network.Principal;
 
 public class LockService {

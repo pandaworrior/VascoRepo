@@ -5,6 +5,7 @@ import org.jgroups.Global;
 import org.jgroups.protocols.raft.*;
 import org.jgroups.raft.RaftHandle;
 import org.jgroups.util.*;
+import org.mpi.vasco.coordination.protocols.Protocol;
 import org.mpi.vasco.coordination.protocols.util.ConflictTable;
 import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
@@ -227,7 +228,7 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
     //TODO: have to change this to query the counter specified by the conflict table
     protected LockReply _getAndAdd(LockRequest lrRequest) {
     	Debug.println("Execute get and add for request " + lrRequest.toString() + "\n");
-    	LockReply lcReply = new LockReply(lrRequest.getOpName());
+    	LockReply lcReply = new LockReply(lrRequest.getOpName(), Protocol.PROTOCOL_SYM);
         synchronized(counters) {
         	for(Map.Entry<String, Set<String>> tableMap : lrRequest.getKeyList().entrySet()){
         		Map<String, Long> subCounters = this.counters.get(tableMap.getKey());

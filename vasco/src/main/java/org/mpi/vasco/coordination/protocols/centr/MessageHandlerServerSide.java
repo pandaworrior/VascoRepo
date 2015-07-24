@@ -13,6 +13,7 @@ import java.util.Set;
 import org.apache.commons.lang3.RandomUtils;
 import org.mpi.vasco.coordination.BaseNode;
 import org.mpi.vasco.coordination.membership.Role;
+import org.mpi.vasco.coordination.protocols.Protocol;
 import org.mpi.vasco.coordination.protocols.centr.rsm.CounterService;
 import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
 import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
@@ -79,7 +80,7 @@ public class MessageHandlerServerSide extends BaseNode{
 	
 	public LockRepMessage generateRandomReplyMessage(LockReqMessage msg){
 		Debug.println("Generate a random reply message");
-		LockReply rp = new LockReply(msg.getLockReq().getOpName());
+		LockReply rp = new LockReply(msg.getLockReq().getOpName(), Protocol.PROTOCOL_SYM);
 		Iterator it = msg.getLockReq().getKeyList().entrySet().iterator();
 		while(it.hasNext()){
 			Map.Entry<String, Set<String>> e = (Entry<String, Set<String>>) it.next();
