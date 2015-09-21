@@ -23,6 +23,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -38,10 +39,12 @@ public class LockReply {
 	int protocolType;
 	
 	/** The key counter map. 
-	 * key -> table name
-	 * value -> hashmap from key to counter
+	 * first level key -> table name
+	 * second level key -> primary keys in that table
+	 * third level key -> counter name (operation name requires stronger consistency semantics)
+	 * value -> counter value
 	 * */
-	HashMap<String, HashMap<String, Long>> keyCounterMap;
+	HashMap<String, HashMap<String, HashMap<String, Long>>> keyCounterMap;
 	
 	/** The arr. */
 	byte[] arr;
@@ -52,7 +55,7 @@ public class LockReply {
 	 * @param _opName the _op name
 	 * @param _keyCounterMap the _key counter map
 	 */
-	public LockReply(String _opName, int pType, HashMap<String, HashMap<String, Long>> _keyCounterMap){
+	public LockReply(String _opName, int pType, HashMap<String, HashMap<String, HashMap<String, Long>>> _keyCounterMap){
 		this.setOpName(_opName);
 		this.setProtocolType(pType);
 		this.setKeyCounterMap(_keyCounterMap);
@@ -67,7 +70,7 @@ public class LockReply {
 	public LockReply(String _opName, int pType){
 		this.setOpName(_opName);
 		this.setProtocolType(pType);
-		this.setKeyCounterMap(new HashMap<String, HashMap<String, Long>>());
+		this.setKeyCounterMap(new HashMap<String, HashMap<String, HashMap<String, Long>>>());
 		this.setArr(null);
 	}
 	
@@ -112,7 +115,7 @@ public class LockReply {
 	 *
 	 * @return the key counter map
 	 */
-	public HashMap<String, HashMap<String, Long>> getKeyCounterMap() {
+	public HashMap<String, HashMap<String, HashMap<String, Long>>> getKeyCounterMap() {
 		return keyCounterMap;
 	}
 
@@ -121,7 +124,7 @@ public class LockReply {
 	 *
 	 * @param keyCounterMap the key counter map
 	 */
-	public void setKeyCounterMap(HashMap<String, HashMap<String, Long>> keyCounterMap) {
+	public void setKeyCounterMap(HashMap<String, HashMap<String, HashMap<String, Long>>> keyCounterMap) {
 		this.keyCounterMap = keyCounterMap;
 	}
 	
@@ -131,13 +134,26 @@ public class LockReply {
 	 * @param key the key
 	 * @param counter the counter
 	 */
-	public void addKeyCounterPair(String keyGroup, String key, long counter){
-		HashMap<String, Long> keyCounter = this.getKeyCounterMap().get(keyGroup);
-		if(keyCounter == null){
-			keyCounter = new HashMap<String, Long>();
-			this.getKeyCounterMap().put(keyGroup, keyCounter);
+	public void addKeyCounterPair(String keyGroup, String key, String conflictStr, long counter){
+		//get table
+		HashMap<String, HashMap<String, Long>> keyCounterMap = this.getKeyCounterMap().get(keyGroup);
+		if(keyCounterMap == null){
+			keyCounterMap = new HashMap<String, HashMap<String, Long>>();
+			this.getKeyCounterMap().put(keyGroup, keyCounterMap);
 		}
-		keyCounter.put(key, counter);
+		
+		//get key name
+		HashMap<String, Long> counterSet = keyCounterMap.get(key);
+		if(counterSet == null){
+			counterSet = new HashMap<String, Long>();
+			keyCounterMap.put(key, counterSet);
+		}
+		
+		if(!counterSet.containsKey(conflictStr)){
+			counterSet.put(conflictStr, counter);
+		}else{
+			throw new RuntimeException("Found duplicates\n");
+		}
 	}
 	
 	/**
@@ -151,12 +167,17 @@ public class LockReply {
 		this.setOpName(dis.readUTF());
 		this.setProtocolType(dis.readInt());
 		int numOfKeyGroups = dis.readInt();
-		this.setKeyCounterMap(new HashMap<String, HashMap<String, Long>>());
+		this.setKeyCounterMap(new HashMap<String, HashMap<String, HashMap<String, Long>>>());
 		while(numOfKeyGroups > 0){
 			String keyGroupStr = dis.readUTF();
 			int numOfKeys = dis.readInt();
 			while(numOfKeys > 0){
-				this.addKeyCounterPair(keyGroupStr, dis.readUTF(), dis.readLong());
+				String key = dis.readUTF();
+				int numOfConflicts = dis.readInt();
+				while(numOfConflicts > 0){
+					this.addKeyCounterPair(keyGroupStr, key, dis.readUTF(), dis.readLong());
+					numOfConflicts--;
+				}
 				numOfKeys--;
 			}
 			numOfKeyGroups--;
@@ -177,13 +198,19 @@ public class LockReply {
 			dos.writeInt(this.getKeyCounterMap().size());
 			Iterator it = this.getKeyCounterMap().entrySet().iterator();
 			while(it.hasNext()){
-				Map.Entry<String, HashMap<String, Long>> e = (Entry<String, HashMap<String, Long>>) it.next();
+				Map.Entry<String, HashMap<String, HashMap<String, Long>>> e = (Entry<String, HashMap<String, HashMap<String, Long>>>) it.next();
 				dos.writeUTF(e.getKey());
 				dos.writeInt(e.getValue().size());
 				Set<String> keySet = e.getValue().keySet();
 				for(String key : keySet){
 					dos.writeUTF(key);
-					dos.writeLong(e.getValue().get(key).longValue());
+					HashMap<String, Long> counterSet = e.getValue().get(key);
+					dos.writeInt(counterSet.size());
+					for(Map.Entry<String, Long> counter : counterSet.entrySet()){
+						dos.writeUTF(counter.getKey());
+						dos.writeLong(counter.getValue().longValue());
+					}
+					
 				}
 			}
 			this.setArr(baos.toByteArray());
@@ -233,6 +260,54 @@ public class LockReply {
 		this.arr = arr;
 	}
 	
+	private long getCounterByName(String tableName, String primaryKeyName, String operationName){
+		HashMap<String, HashMap<String, Long>> secondLevelMap = this.getKeyCounterMap().get(tableName);
+		if(secondLevelMap != null){
+			HashMap<String, Long> thirdLevelMap = secondLevelMap.get(primaryKeyName);
+			if(thirdLevelMap != null){
+				if(thirdLevelMap.containsKey(operationName)){
+					return thirdLevelMap.get(operationName).longValue();
+				}
+			}
+		}
+		return -1;
+	}
+	
+	public void aggreLockReplies(List<LockReply> lcReplies){
+		if(lcReplies == null || lcReplies.isEmpty()){
+			return;
+		}else{
+			Iterator it = this.getKeyCounterMap().entrySet().iterator();
+			while(it.hasNext()){
+				Map.Entry<String, HashMap<String, HashMap<String, Long>>> e = (Entry<String, HashMap<String, HashMap<String, Long>>>) it.next();
+				//table name
+				String tableName = e.getKey();
+				Set<String> keySet = e.getValue().keySet();
+				for(String key : keySet){
+					//enumerate all primary keys
+					//check all counters
+					HashMap<String, Long> counterSet = e.getValue().get(key);
+					for(Map.Entry<String, Long> counter : counterSet.entrySet()){
+						//conflict operation name
+						String operationName = counter.getKey();
+						long counterValue = counter.getValue().longValue();
+						//aggregate here:
+						
+						for(LockReply lcReplyEntry : lcReplies){
+							long cValue = lcReplyEntry.getCounterByName(tableName, key, operationName);
+							if(cValue == -1){
+								throw new RuntimeException("one lc reply doesn't observe the following counter " + tableName + ", " + key + ", " + operationName);
+							}else{
+								counterValue += cValue;
+							}
+						}
+						counterSet.put(operationName, new Long(counterValue));
+					}
+				}
+			}
+		}
+	}
+	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
@@ -246,18 +321,23 @@ public class LockReply {
 		strBuild.append("), (keys, {");
 		Iterator it = this.getKeyCounterMap().entrySet().iterator();
 		while(it.hasNext()){
-			Map.Entry<String, HashMap<String, Long>> e = (Entry<String, HashMap<String, Long>>) it.next();
+			Map.Entry<String, HashMap<String, HashMap<String, Long>>> e = (Entry<String, HashMap<String, HashMap<String, Long>>>) it.next();
 			strBuild.append("<keyGroups: ");
 			strBuild.append(e.getKey());
 			strBuild.append(", {");
-			Iterator keyIt = e.getValue().entrySet().iterator();
-			while(keyIt.hasNext()){
-				Entry<String, Long> keyEntry = (Entry<String, Long>) keyIt.next();
-				strBuild.append('(');
-				strBuild.append(keyEntry.getKey());
-				strBuild.append(',');
-				strBuild.append(keyEntry.getValue().longValue());
-				strBuild.append("),");
+			Set<String> keySet = e.getValue().keySet();
+			for(String key : keySet){
+				strBuild.append("key: ");
+				strBuild.append(key);
+				strBuild.append(", counters:  ");
+				HashMap<String, Long> counterSet = e.getValue().get(key);
+				for(Map.Entry<String, Long> counter : counterSet.entrySet()){
+					strBuild.append('(');
+					strBuild.append(counter.getKey());
+					strBuild.append(',');
+					strBuild.append(counter.getValue().longValue());
+					strBuild.append("),");
+				}
 			}
 			strBuild.deleteCharAt(strBuild.length() - 1);
 			strBuild.append("}, ");

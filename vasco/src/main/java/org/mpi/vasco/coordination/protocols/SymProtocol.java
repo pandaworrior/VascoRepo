@@ -19,9 +19,11 @@ package org.mpi.vasco.coordination.protocols;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.mpi.vasco.coordination.MessageHandlerClientSide;
+import org.mpi.vasco.coordination.VascoServiceAgentFactory;
 import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
 import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
+import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.coordination.protocols.util.SymMetaData;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
@@ -57,7 +59,7 @@ public class SymProtocol extends Protocol{
 		synchronized(meta){
 			while(meta.getLockReply() == null){
 				try {
-					meta.wait();
+					meta.wait(VascoServiceAgentFactory.RESPONSE_WAITING_TIME_IN_MILL_SECONDS);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -88,6 +90,11 @@ public class SymProtocol extends Protocol{
 	
 	private void cleanUpMetaData(ProxyTxnId txnId){
 		this.symMetaDataMap.remove(txnId);
+	}
+
+	@Override
+	public LockReply getLocalPermission(ProxyTxnId txnId, LockRequest lcR) {
+		throw new RuntimeException("Not implemented yet!");
 	}
 
 }

@@ -14,14 +14,12 @@
  * Contact:
  *     chengli@mpi-sws.org    
  *******************************************************************************/
-package org.mpi.vasco.coordination.protocols;
+package org.mpi.vasco.coordination.protocols.util;
 
 import org.mpi.vasco.coordination.MessageHandlerClientSide;
-import org.mpi.vasco.coordination.membership.Role;
-import org.mpi.vasco.coordination.protocols.util.LockReply;
-import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class Protocol.
  */
@@ -38,8 +36,13 @@ public abstract class Protocol {
 	
 	
 	/** The client. */
-	MessageHandlerClientSide client;
+	protected MessageHandlerClientSide client;
 	
+	/**
+	 * Instantiates a new protocol.
+	 *
+	 * @param c the c
+	 */
 	public Protocol(MessageHandlerClientSide c){
 		this.setClient(c);
 	}
@@ -54,6 +57,16 @@ public abstract class Protocol {
 	public abstract LockReply getPermission(ProxyTxnId txnId, LockRequest lcR);
 	
 	/**
+	 * Gets the local permission, generate a reply to an asym protocol
+	 * wait for being aggregated.
+	 *
+	 * @param txnId the txn id
+	 * @param lcR the lc r
+	 * @return the local permission
+	 */
+	public abstract LockReply getLocalPermission(ProxyTxnId txnId, LockRequest lcR);
+	
+	/**
 	 * Adds the lock reply.
 	 *
 	 * @param txnId the txn id
@@ -62,6 +75,11 @@ public abstract class Protocol {
 	public abstract void addLockReply(ProxyTxnId txnId, LockReply lcReply);
 	
 	
+	/**
+	 * Sets the client.
+	 *
+	 * @param client the new clientlcR
+	 */
 	public void setClient(MessageHandlerClientSide client){
 		this.client = client;
 	}
@@ -73,5 +91,26 @@ public abstract class Protocol {
 	 */
 	public MessageHandlerClientSide getMessageClient(){
 		return client;
+	}
+	
+	//public abstract void waitForPermissionLocalMatch();
+	
+	//public abstract void cleanUpLocalPermissionWait();
+	
+	/**
+	 * Gets the protocol tag string.
+	 *
+	 * @param pType the type
+	 * @return the protocol tag string
+	 */
+	public static String getProtocolTagString(int pType){
+		switch(pType){
+		case Protocol.PROTOCOL_ASYM:
+			return "Asymm conflict";
+		case Protocol.PROTOCOL_SYM:
+			return "Symm_conflict";
+			default:
+				throw new RuntimeException("No such protocol type " + pType);
+		}
 	}
 }

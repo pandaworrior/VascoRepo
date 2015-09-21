@@ -25,7 +25,7 @@ import java.util.Set;
 public class Conflict {
 	String opName;
 	Set<String> confList;
-	boolean isBarrier;// true => in this restriction, the other part is the barrier
+	boolean isBarrier;// true => in this restriction, the other part is the barrier ???
 	
 	public Conflict(String _opName){
 		this.setOpName(_opName);

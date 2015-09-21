@@ -18,8 +18,10 @@ package org.mpi.vasco.coordination.protocols.util;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.stream.XMLEventReader;
@@ -36,31 +38,75 @@ import org.mpi.vasco.util.debug.Debug;
 public class ConflictTable {
 
 	/** The all symmetry conflicts. Not thread-safe, but it is fine since it is not modified at runtime*/
-	HashMap<String, Conflict> symConflicts;
-	HashMap<String, Conflict> asymConflicts;
+	List<Map<String, Conflict>> conflicts;
 	
-	public final static byte CONFLICT_INDEX_SYM = 0;
-	public final static byte CONFLICT_INDEX_ASYM = 1;
-	
+	/** The Constant CONFLICT_COLLECTION_STR. */
 	private final static String CONFLICT_COLLECTION_STR = "collectionOfConflicts";
+	
+	/** The Constant CONFLICT_NUM_STR. */
 	private final static String CONFLICT_NUM_STR = "numOfConflicts";
+	
+	/** The Constant CONFLICT_STR. */
 	private final static String CONFLICT_STR = "conflict";
+	
+	/** The Constant CONFLICT_TYPE_STR. */
 	private final static String CONFLICT_TYPE_STR = "type";
+	
+	/** The Constant ASYMMETRY_CONFLICT_STR. */
 	private final static String ASYMMETRY_CONFLICT_STR = "asymmetry";
+	
+	/** The Constant SYMMETRY_CONFLICT_STR. */
 	private final static String SYMMETRY_CONFLICT_STR = "symmetry";
 	
+	/** The Constant LEFT_OPERANT_STR. */
 	private final static String LEFT_OPERANT_STR = "leftOperand";
+	
+	/** The Constant RIGHT_OPERANT_STR. */
 	private final static String RIGHT_OPERANT_STR = "rightOperand";
+	
+	/** The Constant BARRIER_STR. */
 	private final static String BARRIER_STR = "barrier";
+	
+	/** The Constant YES_STR. */
 	private final static String YES_STR = "yes";
+	
+	/** The Constant NO_STR. */
 	private final static String NO_STR = "no";
 	
+	/**
+	 * Instantiates a new conflict table.
+	 *
+	 * @param xmlFile the xml file
+	 */
 	public ConflictTable(String xmlFile){
-		this.setSymConflicts(new HashMap<String, Conflict>());
-		this.setAsymConflicts(new HashMap<String, Conflict>());
+		this.setIntialConflicts();
 		this.readFromXml(xmlFile);
 	}
 	
+	/**
+	 * Gets the conflicts.
+	 *
+	 * @return the conflicts
+	 */
+	public List<Map<String, Conflict>> getConflicts() {
+		return conflicts;
+	}
+
+	/**
+	 * Sets the intial conflicts.
+	 */
+	public void setIntialConflicts() {
+		this.conflicts = new ArrayList<Map<String, Conflict>>();
+		for(int i = 0; i < Protocol.NUM_OF_PROTOCOLS; i++){
+			this.conflicts.add(new HashMap<String, Conflict>());
+		}
+	}
+	
+	/**
+	 * Read from xml.
+	 *
+	 * @param xmlFile the xml file
+	 */
 	public void readFromXml(String xmlFile){
 		int numOfConflicts = 0;
 		try{
@@ -139,16 +185,29 @@ public class ConflictTable {
 		}
 	}
 	
+	/**
+	 * Adds the sym conflict.
+	 *
+	 * @param opName1 the op name1
+	 * @param opName2 the op name2
+	 */
 	public void addSymConflict(String opName1, String opName2){
-		Conflict c1 = this.getConflictByOpName(opName1, CONFLICT_INDEX_SYM);
-		Conflict c2 = this.getConflictByOpName(opName2, CONFLICT_INDEX_SYM);
+		Conflict c1 = this.getConflictByOpName(opName1, Protocol.PROTOCOL_SYM);
+		Conflict c2 = this.getConflictByOpName(opName2, Protocol.PROTOCOL_SYM);
 		c1.addConflict(opName2);
 		c2.addConflict(opName1);
 	}
 	
+	/**
+	 * Adds the asym conflict.
+	 *
+	 * @param opName1 the op name1
+	 * @param opName2 the op name2
+	 * @param barrier the barrier
+	 */
 	public void addAsymConflict(String opName1, String opName2, boolean barrier){
-		Conflict c1 = this.getConflictByOpName(opName1, CONFLICT_INDEX_ASYM);
-		Conflict c2 = this.getConflictByOpName(opName2, CONFLICT_INDEX_ASYM);
+		Conflict c1 = this.getConflictByOpName(opName1, Protocol.PROTOCOL_ASYM);
+		Conflict c2 = this.getConflictByOpName(opName2, Protocol.PROTOCOL_ASYM);
 		c1.addConflict(opName2);
 		c2.addConflict(opName1);
 		if(barrier){
@@ -156,22 +215,23 @@ public class ConflictTable {
 		}
 	}
 	
-	public Conflict getConflictByOpName(String opName, byte conflictType){
+	/**
+	 * Gets the conflict by op name.
+	 *
+	 * @param opName the op name
+	 * @param conflictType the conflict type
+	 * @return the conflict by op name
+	 */
+	public Conflict getConflictByOpName(String opName, int conflictType){
 		Conflict c = null;
 		
 		switch(conflictType){
-		case CONFLICT_INDEX_ASYM:
-			c= this.getAsymConflicts().get(opName);
+		case Protocol.PROTOCOL_ASYM:
+		case Protocol.PROTOCOL_SYM:
+			c = this.getConflicts().get(conflictType).get(opName);
 			if(c == null){
 				c = new Conflict(opName);
-				this.asymConflicts.put(opName, c);
-			}
-			break;
-		case CONFLICT_INDEX_SYM:
-			c = this.getSymConflicts().get(opName);
-			if(c == null){
-				c = new Conflict(opName);
-				this.symConflicts.put(opName, c);
+				this.getConflicts().get(conflictType).put(opName, c);
 			}
 			break;
 			default:
@@ -181,67 +241,74 @@ public class ConflictTable {
 		return c;
 	}
 	
+	/**
+	 * Gets the num of conflicts.
+	 *
+	 * @return the num of conflicts
+	 */
 	public int getNumOfConflicts(){
 		int numOfConflicts = 0;
-		Iterator it1 = this.getSymConflicts().entrySet().iterator();
-		while(it1.hasNext()){
-			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it1.next();
-			numOfConflicts += e.getValue().size();
-		}
-		
-		Iterator it2 = this.getAsymConflicts().entrySet().iterator();
-		while(it2.hasNext()){
-			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it2.next();
-			numOfConflicts += e.getValue().size();
+		for(int i = 0 ; i < Protocol.NUM_OF_PROTOCOLS; i++){
+			Iterator it = this.conflicts.get(i).entrySet().iterator();
+			while(it.hasNext()){
+				Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it.next();
+				numOfConflicts += e.getValue().size();
+			}
 		}
 		return numOfConflicts;
 	}
 	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
 	public String toString(){
-		StringBuilder strB = new StringBuilder("Sym conflicts \n");
-		Iterator it1 = this.getSymConflicts().entrySet().iterator();
-		while(it1.hasNext()){
-			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it1.next();
-			strB.append("\t");
-			strB.append(e.getValue().toString());
-			strB.append("\n");
+		StringBuilder strB = new StringBuilder("");
+		for(int i = 0 ; i < Protocol.NUM_OF_PROTOCOLS; i++){
+			String tagString = Protocol.getProtocolTagString(i);
+			strB.append(tagString + "\n");
+			Iterator it = this.conflicts.get(i).entrySet().iterator();
+			while(it.hasNext()){
+				Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it.next();
+				strB.append("\t");
+				strB.append(e.getValue().toString());
+				strB.append("\n");
+			}
 		}
-		
-		strB.append("Asym conflicts \n");
-		Iterator it2 = this.getAsymConflicts().entrySet().iterator();
-		while(it2.hasNext()){
-			Map.Entry<String, Conflict> e = (Map.Entry<String, Conflict>)it2.next();
-			strB.append("\t");
-			strB.append(e.getValue().toString());
-			strB.append("\n");
-		}
-		
-		
 		return strB.toString();
 	}
 	
+	/**
+	 * Prints the out.
+	 */
 	public void printOut(){
 		Debug.println("-----------> Conflict table<---------------\n");
 		Debug.println(this.toString());
 		Debug.println("-----------> End of printing Conflict table <--------------");
 	}
 	
-	public HashMap<String, Conflict> getSymConflicts() {
-		return symConflicts;
-	}
-
-	public void setSymConflicts(HashMap<String, Conflict> symConflicts) {
-		this.symConflicts = symConflicts;
-	}
-
-	public HashMap<String, Conflict> getAsymConflicts() {
-		return asymConflicts;
-	}
-
-	public void setAsymConflicts(HashMap<String, Conflict> asymConflicts) {
-		this.asymConflicts = asymConflicts;
+	/**
+	 * Gets the protocol type.
+	 *
+	 * @param opName the op name
+	 * @return the protocol type
+	 */
+	public int[] getProtocolType(String opName){
+		int[] pTypes = new int[Protocol.NUM_OF_PROTOCOLS];
+		for(int i = 0; i < Protocol.NUM_OF_PROTOCOLS; i++){
+			if(this.conflicts.get(i).containsKey(opName)){
+				pTypes[i] = 1;
+			}else{
+				pTypes[i] = 0;
+			}
+		}
+		return pTypes;
 	}
 	
+	/**
+	 * The main method.
+	 *
+	 * @param args the arguments
+	 */
 	public static void main(String[] args){
 		if(args.length != 1){
 			System.err.println("ConflictTable [configXmlFilePath]");	

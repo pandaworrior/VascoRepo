@@ -5,10 +5,10 @@ import org.jgroups.Global;
 import org.jgroups.protocols.raft.*;
 import org.jgroups.raft.RaftHandle;
 import org.jgroups.util.*;
-import org.mpi.vasco.coordination.protocols.Protocol;
 import org.mpi.vasco.coordination.protocols.util.ConflictTable;
 import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
+import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.util.debug.Debug;
 
 import java.io.DataInput;
@@ -33,8 +33,8 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
     
     protected ConflictTable conflictTable;
 
-    // keys: table name, second level key: counter names, values: counter values
-    protected final Map<String, Map<String, Long>> counters=new HashMap<>();
+    // keys: table name, second level key: keyname, values: counter set, third level key: conflict name, values: counter value
+    protected final Map<String, Map<String, Map<String, Long>>> counters=new HashMap<>();
 
     protected enum Command {getAndAdd}
 
@@ -81,9 +81,17 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
 
     public String printCounters() {
         StringBuilder sb=new StringBuilder();
-        for(Map.Entry<String, Map<String, Long>> entry: counters.entrySet()) {
-        	for(Map.Entry<String, Long> innerEntry : entry.getValue().entrySet()){
-        		sb.append(entry.getKey()).append(" + ").append(innerEntry.getKey()).append(" = ").append(innerEntry.getValue()).append("\n");
+        for(Map.Entry<String, Map<String, Map<String, Long>>> fstLEntry: counters.entrySet()) {
+        	sb.append("Table: " + fstLEntry.getKey() + "\n");
+        	for(Map.Entry<String, Map<String, Long>> sndLEntry : fstLEntry.getValue().entrySet()){
+        		sb.append("Key: " + sndLEntry.getKey() + " {");
+        		for(Map.Entry<String, Long> trdLEntry : sndLEntry.getValue().entrySet()){
+        			sb.append("(counter,  "+trdLEntry.getKey() + " value " + trdLEntry.getValue().longValue() + ",");
+        		}
+        		if(sb.charAt(sb.length() - 1) == ','){
+        			sb.deleteCharAt(sb.length() - 1);
+        		}
+        		sb.append("}\n");
         	}
         }
         return sb.toString();
@@ -139,7 +147,7 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
         raft.logEntries((entry, index) -> {
             StringBuilder sb=new StringBuilder().append(index).append(" (").append(entry.term()).append("): ");
             if(entry.command() == null) {
-                sb.append("<marker record>");
+                sb.append("<marker record>");Long
                 System.out.println(sb);
                 return;
             }
@@ -225,25 +233,35 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
         return sb.toString();
     }
 
-    //TODO: have to change this to query the counter specified by the conflict table
+    //{tableName, {key, {(countername, longvalue)}}
     protected LockReply _getAndAdd(LockRequest lrRequest) {
     	Debug.println("Execute get and add for request " + lrRequest.toString() + "\n");
     	LockReply lcReply = new LockReply(lrRequest.getOpName(), Protocol.PROTOCOL_SYM);
+    	//get a list of conflicts:
+    	Set<String> conflicts = this.conflictTable.getConflictByOpName(lrRequest.getOpName(), Protocol.PROTOCOL_SYM).getConfList();
+    	
         synchronized(counters) {
         	for(Map.Entry<String, Set<String>> tableMap : lrRequest.getKeyList().entrySet()){
-        		Map<String, Long> subCounters = this.counters.get(tableMap.getKey());
-        		if(subCounters == null){
-        			subCounters = new HashMap<String, Long>();
-        			this.counters.put(tableMap.getKey(), subCounters);
+        		Map<String, Map<String, Long>> keyCounterMap = this.counters.get(tableMap.getKey());
+        		if(keyCounterMap == null){
+        			keyCounterMap = new HashMap<String, Map<String, Long>>();
+        			this.counters.put(tableMap.getKey(), keyCounterMap);
         		}
         		for(String key : tableMap.getValue()){
-        			Long counterValue = subCounters.get(key);
-        			if(counterValue == null){
-        				lcReply.addKeyCounterPair(tableMap.getKey(), key, 0L);
-        				subCounters.put(key, 1L);
-        			}else{
-        				lcReply.addKeyCounterPair(tableMap.getKey(), key, counterValue.longValue());
-        				subCounters.put(key, counterValue.longValue() + 1L);
+        			Map<String, Long> counterSet = keyCounterMap.get(key);
+        			if(counterSet == null){
+        				counterSet = new HashMap<String, Long>();
+        				keyCounterMap.put(key, counterSet);
+        			}
+        			for(String conflictStr : conflicts){
+        				Long counter = counterSet.get(conflictStr);
+	        			if(counter == null){
+	        				lcReply.addKeyCounterPair(tableMap.getKey(), key, conflictStr, 0L);
+	        				counterSet.put(conflictStr, 1L);
+	        			}else{
+	        				lcReply.addKeyCounterPair(tableMap.getKey(), key, conflictStr, counter.longValue());
+	        				counterSet.put(key, counter.longValue() + 1L);
+	        			}
         			}
         		}
         	}

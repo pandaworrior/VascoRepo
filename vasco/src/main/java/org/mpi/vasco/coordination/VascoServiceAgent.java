@@ -5,10 +5,11 @@ import java.util.List;
 
 import org.mpi.vasco.coordination.membership.Role;
 import org.mpi.vasco.coordination.protocols.AsymProtocol;
-import org.mpi.vasco.coordination.protocols.Protocol;
 import org.mpi.vasco.coordination.protocols.SymProtocol;
+import org.mpi.vasco.coordination.protocols.util.ConflictTable;
 import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
+import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
 /**
@@ -22,6 +23,7 @@ public class VascoServiceAgent {
 	
 	List<Protocol> protocols;
 	MessageHandlerClientSide client;
+	ConflictTable confTable;
 	
 	//it must contains a conflict table
 	//it must return a null if the op is not restricted
@@ -30,6 +32,9 @@ public class VascoServiceAgent {
 	
 	public VascoServiceAgent(String memFile, int clientId){
 		this.setUpClient(memFile, clientId);
+		
+		confTable = new ConflictTable(memFile);
+		
 		protocols = new ArrayList<Protocol>();
 		SymProtocol symProtocol = new SymProtocol(this.client);
 		protocols.add(symProtocol);
@@ -49,12 +54,33 @@ public class VascoServiceAgent {
 		return protocols.get(protocolType);
 	}
 	
-	int getProtocolType(LockRequest lcR){
+	/*int[] getProtocolTypes(LockRequest lcR){
 		throw new RuntimeException("Not implemented yet");
+	}*/
+	
+	int getProtocolType(LockRequest lcR){
+		int[] pTypes = this.confTable.getProtocolType(lcR.getOpName());
+		for(int i = 0; i < pTypes.length; i++){
+			if(pTypes[i] == 1){
+				return i;
+			}
+		}
+		return -1;
 	}
+	
+	/*LockReply[] getAllPermissions(ProxyTxnId txnId, LockRequest lcR){
+		int[] protocolTypes = this.getProtocolTypes(lcR);
+		
+		for(int i = 0; i < protocolTypes.length; i++){
+			
+		}
+	}*/
 	
 	LockReply getPemissions(ProxyTxnId txnId, LockRequest lcR){
 		int protocolType = this.getProtocolType(lcR);
+		if(protocolType == -1){
+			return null;//do not need any permission
+		}
 		return this.getProtocol(protocolType).getPermission(txnId, lcR);
 	}
 

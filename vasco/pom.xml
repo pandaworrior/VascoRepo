@@ -91,6 +91,13 @@
         <scope>system</scope>
         <systemPath>${project.basedir}/lib/commons-lang3-3.4.jar</systemPath>
     </dependency>
+        <dependency>
+    	<groupId>fastUtil</groupId>
+    	<artifactId>fastUtil</artifactId>
+    	<version>7.0.6</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/lib/fastutil-7.0.6.jar</systemPath>
+    </dependency>
   </dependencies>
   <build>
   <plugins>

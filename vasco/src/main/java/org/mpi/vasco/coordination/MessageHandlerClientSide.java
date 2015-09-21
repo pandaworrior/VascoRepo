@@ -8,13 +8,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.mpi.vasco.coordination.membership.Role;
-import org.mpi.vasco.coordination.protocols.Protocol;
 import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
 import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
 import org.mpi.vasco.coordination.protocols.messages.MessageFactory;
 import org.mpi.vasco.coordination.protocols.messages.MessageTags;
 import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
+import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.network.ParallelPassThroughNetworkQueue;
 import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.network.netty.NettyTCPReceiver;
@@ -45,7 +45,12 @@ public class MessageHandlerClientSide extends BaseNode{
 		
 		switch (msg.getTag()) {
 		case MessageTags.LOCKREP:
+			//Receive the reply from the centralized server
 			process((LockRepMessage) msg);
+			break;
+		case MessageTags.LOCKREQ:
+			//Barrier, receive request from the client
+			process((LockReqMessage) msg);
 			break;
 		default:
 			throw new RuntimeException("invalid message tag: " + msg.getTag());
@@ -64,6 +69,21 @@ public class MessageHandlerClientSide extends BaseNode{
 		p.addLockReply(msg.getProxyTxnId(), lcReply);
 		mf.returnLockRepMessage(msg);
 		
+	}
+	
+	private void process(LockReqMessage msg){
+		Debug.printf("Receive a lock request message from client content %s", msg.toString());
+		Protocol p = this.getAgent().getProtocol(Protocol.PROTOCOL_ASYM);
+		if(p == null){
+			throw new RuntimeException("No such a protocol " + Protocol.PROTOCOL_ASYM);
+		}
+		
+		LockReply lcReply = p.getLocalPermission(msg.getProxyTxnId(), msg.getLockReq());
+		LockRepMessage repMsg = new LockRepMessage(msg.getProxyTxnId(), lcReply);
+		int clientId = msg.getGlobalProxyId();
+		this.sendToLockClient(repMsg, clientId);
+		mf.returnLockReqMessage(msg);
+		mf.returnLockRepMessage(repMsg);
 	}
 
 	@Override

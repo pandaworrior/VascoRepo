@@ -13,21 +13,19 @@ import java.util.Set;
 import org.apache.commons.lang3.RandomUtils;
 import org.mpi.vasco.coordination.BaseNode;
 import org.mpi.vasco.coordination.membership.Role;
-import org.mpi.vasco.coordination.protocols.Protocol;
 import org.mpi.vasco.coordination.protocols.centr.rsm.CounterService;
 import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
 import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
 import org.mpi.vasco.coordination.protocols.messages.MessageFactory;
 import org.mpi.vasco.coordination.protocols.messages.MessageTags;
 import org.mpi.vasco.coordination.protocols.util.LockReply;
+import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.network.ParallelPassThroughNetworkQueue;
 import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.network.netty.NettyTCPReceiver;
 import org.mpi.vasco.network.netty.NettyTCPSender;
 import org.mpi.vasco.util.debug.Debug;
 
-
-// TODO: Auto-generated Javadoc
 /**
  * The Class MessageHandlerServerSide.
  */
@@ -78,7 +76,7 @@ public class MessageHandlerServerSide extends BaseNode{
 		}
 	}
 	
-	public LockRepMessage generateRandomReplyMessage(LockReqMessage msg){
+	/*public LockRepMessage generateRandomReplyMessage(LockReqMessage msg){
 		Debug.println("Generate a random reply message");
 		LockReply rp = new LockReply(msg.getLockReq().getOpName(), Protocol.PROTOCOL_SYM);
 		Iterator it = msg.getLockReq().getKeyList().entrySet().iterator();
@@ -92,7 +90,7 @@ public class MessageHandlerServerSide extends BaseNode{
 		}
 		LockRepMessage pMsg = new LockRepMessage(msg.getProxyTxnId(), rp);
 		return pMsg;
-	}
+	}*/
 	
 	/**
 	 * Process for test
