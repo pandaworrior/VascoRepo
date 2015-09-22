@@ -95,8 +95,6 @@ public abstract class Protocol {
 	
 	//public abstract void waitForPermissionLocalMatch();
 	
-	//public abstract void cleanUpLocalPermissionWait();
-	
 	/**
 	 * Gets the protocol tag string.
 	 *

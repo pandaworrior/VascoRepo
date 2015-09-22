@@ -28,10 +28,12 @@ public class MessageTags extends MessageTagBase{
 	// /// PROCESSING LOCAL TRANSACTIONS
 
 	/** The Constant LOCKREQ. */
-	public final static int LOCKREQ = 50; // client to lock server
+	public final static int LOCKREQ = 50; // client to lock server or client
 	// start
 	/** The Constant LOCKREP. */
-	public final static int LOCKREP = 51; // lock server to client
+	public final static int LOCKREP = 51; // lock server or client to client
+	
+	public final static int CLEANUPBARRIER = 52; // client to client
 
 	/**
 	 * Gets the string.
@@ -45,6 +47,8 @@ public class MessageTags extends MessageTagBase{
 			return "LOCKREQ";
 		case MessageTags.LOCKREP:
 			return "LOCKREP";
+		case MessageTags.CLEANUPBARRIER:
+			return "CLEANUPBARRIER";
 		default:
 
 			throw new RuntimeException("Invalid message tag:  " + i);

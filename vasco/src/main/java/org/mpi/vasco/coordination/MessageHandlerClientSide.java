@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.mpi.vasco.coordination.membership.Role;
+import org.mpi.vasco.coordination.protocols.AsymProtocol;
+import org.mpi.vasco.coordination.protocols.messages.CleanUpBarrierMessage;
 import org.mpi.vasco.coordination.protocols.messages.LockRepMessage;
 import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
 import org.mpi.vasco.coordination.protocols.messages.MessageFactory;
@@ -45,13 +47,16 @@ public class MessageHandlerClientSide extends BaseNode{
 		
 		switch (msg.getTag()) {
 		case MessageTags.LOCKREP:
-			//Receive the reply from the centralized server
+			//Receive the reply from the centralized server or a client
 			process((LockRepMessage) msg);
 			break;
 		case MessageTags.LOCKREQ:
 			//Barrier, receive request from the client
 			process((LockReqMessage) msg);
 			break;
+		case MessageTags.CLEANUPBARRIER:
+			//Barrier, clean up a local barrier on the behalf of the remote peer
+			process((CleanUpBarrierMessage)msg);
 		default:
 			throw new RuntimeException("invalid message tag: " + msg.getTag());
 		}
@@ -59,9 +64,10 @@ public class MessageHandlerClientSide extends BaseNode{
 	}
 
 	private void process(LockRepMessage msg) {
-		Debug.printf("Receive a lock reply message from server content %s", msg.toString());
+		Debug.printf("Receive a lock reply message from server or client content %s", msg.toString());
 		LockReply lcReply = msg.getLockRly();
 		int pType = lcReply.getProtocolType();
+		//get either sym or asym protocol
 		Protocol p = this.getAgent().getProtocol(pType);
 		if(p == null){
 			throw new RuntimeException("No such a protocol " + lcReply.getProtocolType());
@@ -84,6 +90,16 @@ public class MessageHandlerClientSide extends BaseNode{
 		this.sendToLockClient(repMsg, clientId);
 		mf.returnLockReqMessage(msg);
 		mf.returnLockRepMessage(repMsg);
+	}
+	
+	private void process(CleanUpBarrierMessage msg){
+		Debug.printf("Receive a clean up barrier message from client content %s", msg.toString());
+		Protocol p = this.getAgent().getProtocol(Protocol.PROTOCOL_ASYM);
+		if(p == null){
+			throw new RuntimeException("No such a protocol " + Protocol.PROTOCOL_ASYM);
+		}
+		
+		((AsymProtocol)p).cleanUpNonBarrierLocal(msg.getProxyTxnId());
 	}
 
 	@Override

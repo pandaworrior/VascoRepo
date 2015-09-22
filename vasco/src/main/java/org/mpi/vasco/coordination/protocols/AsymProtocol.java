@@ -1,14 +1,20 @@
 package org.mpi.vasco.coordination.protocols;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.mpi.vasco.coordination.MessageHandlerClientSide;
 import org.mpi.vasco.coordination.VascoServiceAgentFactory;
+import org.mpi.vasco.coordination.protocols.messages.CleanUpBarrierMessage;
 import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
+import org.mpi.vasco.coordination.protocols.util.Conflict;
 import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.coordination.protocols.util.Protocol;
@@ -20,52 +26,88 @@ public class AsymProtocol extends Protocol{
 	//Store all replies, and trigger an event if all expected replies arrive
 	private ConcurrentHashMap<ProxyTxnId, List<LockReply>> asymReplyMap;
 	
+	private Map<ProxyTxnId, LockRequest> asymRequestMap;
+	
 	//the number of clients will join the barriers
 	private int NUM_OF_CLIENTS;
 	
 	//barrier map and counters
     // keys: table name, second level key: keyname, values: counter set, third level key: conflict name, values: counter value
     private AsymCounterMap counterMap;
+    
+    
+    private Set<ProxyTxnId> activeBarriers;
+    
+    private static int BARRIER_SET_CAPACITY = 1000;
 
 	public AsymProtocol(MessageHandlerClientSide c) {
 		super(c);
 		this.setNUM_OF_CLIENTS(c.getMembership().getLockService().getLockClients().length);
 		this.asymReplyMap = new ConcurrentHashMap<ProxyTxnId, List<LockReply>>();
 		this.setCounterMap(new AsymCounterMap());
+		this.setActiveBarriers(new ObjectOpenHashSet<ProxyTxnId>(BARRIER_SET_CAPACITY));
+		this.asymRequestMap = new ConcurrentHashMap<ProxyTxnId, LockRequest>();
 	}
 
 	@Override
 	public
 	LockReply getPermission(ProxyTxnId txnId, LockRequest lcRequest) {
-		LockReqMessage msg = new LockReqMessage(txnId,
-				client.getMyId(), lcRequest);
 		
-		//check whether if the operation name is the barrier, if not, then check whether barrier exists, 
-		//if not exists, then increment its own counter, then return null
+		//put lcRequest in the record list
+		this.asymRequestMap.put(txnId, lcRequest);
 		
-		//if exists, then need to wait until all barriers' counters become 0
+		LockReply lcReply = null;
 		
+		String opName = lcRequest.getOpName();
+		Conflict c = this.getMessageClient().getAgent().getConfTable().getConflictByOpName(opName, 
+				Protocol.PROTOCOL_ASYM);
+		
+		//check whether if the operation name is the barrier
 		//if the operation name is the barrier, it needs to send the request to all
-		
-		//send the request to all client
-		client.sentToAllLockClients(msg);
-		
-		//waitlcR
-		List<LockReply> lcReplyList = new ArrayList<LockReply>();
-		this.asymReplyMap.put(txnId, lcReplyList);
-		synchronized(lcReplyList){
-			while(lcReplyList.size() != this.getNUM_OF_CLIENTS()){
-				try {
-					lcReplyList.wait(VascoServiceAgentFactory.RESPONSE_WAITING_TIME_IN_MILL_SECONDS);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+		if(c.isBarrier()){
+			
+			//put the barrier id in the active barrier list
+			synchronized(this.activeBarriers){
+				this.activeBarriers.add(txnId);
+			}
+			
+			LockReqMessage msg = new LockReqMessage(txnId,
+					client.getMyId(), lcRequest);
+			//send the request to all client
+			client.sentToAllLockClients(msg);
+			
+			//waitlcR
+			List<LockReply> lcReplyList = new ArrayList<LockReply>();
+			this.asymReplyMap.put(txnId, lcReplyList);
+			synchronized(lcReplyList){
+				while(lcReplyList.size() != this.getNUM_OF_CLIENTS()){
+					try {
+						lcReplyList.wait(VascoServiceAgentFactory.RESPONSE_WAITING_TIME_IN_MILL_SECONDS);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
 			}
+			lcReply = lcReplyList.get(0);
+			lcReply.aggreLockReplies(lcReplyList);
+			lcReplyList.clear();
+		}else{
+			//if not, then get a list of barriers it should wait
+			//increment the corresponding local counters
+			//TODO: check if getConfList contains some other non barrier operations
+			Set<ProxyTxnId> barrierInstances = null;
+			
+			synchronized(this.counterMap){
+				barrierInstances = this.counterMap.getListOfBarrierInstancesAndUpdateLocalCounter(
+					lcRequest.getKeyList(), c.getConfList(), opName);
+			}
+			
+			if(barrierInstances != null && barrierInstances.isEmpty()){
+				lcReply = new LockReply(opName, Protocol.PROTOCOL_ASYM, barrierInstances);
+			}
+			
+			//no barriers to be waiting, then return null
 		}
-		
-		LockReply lcReply = lcReplyList.remove(0);
-		lcReply.aggreLockReplies(lcReplyList);
-		lcReplyList.clear();
 		return lcReply;
 	}
 
@@ -96,34 +138,55 @@ public class AsymProtocol extends Protocol{
 	// the counter of the counter parts and send it back
 	@Override
 	public LockReply getLocalPermission(ProxyTxnId txnId, LockRequest lcR) {
-		// TODO Auto-generated method stub
 		//if the operation is not barrier, then it will check whether barrier exist or not
 		//otherwise, it will first set barrier and then start to send message out
-		return null;
-	}
-	
-	public String getGloballyUniqueBarrierId(){
-		return null;
-	}
-	
-	//actively ask peers to join a barrier when receive a barrier operation
-	public void enterBarrierActive(){
+		String opName = lcR.getOpName();
+		Conflict c = this.getMessageClient().getAgent().getConfTable().getConflictByOpName(opName, 
+				Protocol.PROTOCOL_ASYM);
 		
+		LockReply lcReply = null;
+		synchronized(this.counterMap){
+			
+			Map<String, Map<String, Map<String, Long>>> nonBarrierOpCounterMap = 
+					this.counterMap.getMapOfNonBarrierOpCountersAndPlaceBarrier(
+					lcR.getKeyList(),
+					c.getConfList(), txnId,
+					opName);
+			//barrierInstances = this.counterMap.getListOfBarrierInstancesAndUpdateLocalCounter(
+				//lcRequest.getKeyList(), c.getConfList(), opName);
+			lcReply = new LockReply(opName, Protocol.PROTOCOL_ASYM, nonBarrierOpCounterMap);
+		}
+		return lcReply;
 	}
 	
-	//actively ask peers to leave a barrier when a barrier operation is done
-	public void leaveBarrierActive(){
-		
+	/**
+	 * Once
+	 */
+	public void cleanUpBarrierLocal(ProxyTxnId txnId){
+		//get the key list that this op touched
+		LockRequest lcRequest = this.asymRequestMap.get(txnId);
+		synchronized(this.counterMap){
+			this.counterMap.completeLocalBarrierOpCleanUp(lcRequest.getKeyList(), 
+				lcRequest.getOpName(), txnId);
+		}
+		synchronized(this.activeBarriers){
+			this.activeBarriers.remove(txnId);
+			this.activeBarriers.notifyAll();
+		}
 	}
 	
-	//passively join a barrier when a barrier request is received
-	public void enterBarrierPassive(){
-		
+	public void cleanUpNonBarrierLocal(ProxyTxnId txnId){
+		LockRequest lcRequest = this.asymRequestMap.get(txnId);
+		synchronized(this.counterMap){
+			this.counterMap.completeLocalNonBarrierOpCleanUp(lcRequest.getKeyList(), 
+				lcRequest.getOpName());
+		}
 	}
 	
-	//passively leaves a barrier when a barrier request is one
-	public void leaveBarrierPassive(){
-		
+	public void cleanUpBarrierGlobal(ProxyTxnId txnId){
+		//need to send a message to all clients
+		CleanUpBarrierMessage msg = new CleanUpBarrierMessage(txnId);
+		client.sentToAllLockClients(msg);
 	}
 
 	public AsymCounterMap getCounterMap() {
@@ -132,6 +195,14 @@ public class AsymProtocol extends Protocol{
 
 	public void setCounterMap(AsymCounterMap counterMap) {
 		this.counterMap = counterMap;
+	}
+
+	public Set<ProxyTxnId> getActiveBarriers() {
+		return activeBarriers;
+	}
+
+	public void setActiveBarriers(Set<ProxyTxnId> activeBarriers) {
+		this.activeBarriers = activeBarriers;
 	}
 
 }

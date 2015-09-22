@@ -16,6 +16,8 @@
  *******************************************************************************/
 package org.mpi.vasco.coordination.protocols.util;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -27,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import org.mpi.vasco.txstore.util.ProxyTxnId;
 
 /**
  * The Class LockReply.
@@ -44,7 +48,10 @@ public class LockReply {
 	 * third level key -> counter name (operation name requires stronger consistency semantics)
 	 * value -> counter value
 	 * */
-	HashMap<String, HashMap<String, HashMap<String, Long>>> keyCounterMap;
+	Map<String, Map<String, Map<String, Long>>> keyCounterMap;
+	
+	/*This field is used by the non-barrier op in asym protocol, do not need to encode */
+	Set<ProxyTxnId> barrierInstancesForWait;
 	
 	/** The arr. */
 	byte[] arr;
@@ -55,7 +62,7 @@ public class LockReply {
 	 * @param _opName the _op name
 	 * @param _keyCounterMap the _key counter map
 	 */
-	public LockReply(String _opName, int pType, HashMap<String, HashMap<String, HashMap<String, Long>>> _keyCounterMap){
+	public LockReply(String _opName, int pType, Map<String, Map<String, Map<String, Long>>> _keyCounterMap){
 		this.setOpName(_opName);
 		this.setProtocolType(pType);
 		this.setKeyCounterMap(_keyCounterMap);
@@ -70,8 +77,15 @@ public class LockReply {
 	public LockReply(String _opName, int pType){
 		this.setOpName(_opName);
 		this.setProtocolType(pType);
-		this.setKeyCounterMap(new HashMap<String, HashMap<String, HashMap<String, Long>>>());
+		this.setKeyCounterMap(new Object2ObjectOpenHashMap<String, Map<String, Map<String, Long>>>());
 		this.setArr(null);
+	}
+	
+	/*Only used locally*/
+	public LockReply(String _opName, int pType, Set<ProxyTxnId> barrierIds){
+		this.setOpName(_opName);
+		this.setProtocolType(pType);
+		this.setBarrierInstancesForWait(barrierIds);
 	}
 	
 	/**
@@ -115,7 +129,7 @@ public class LockReply {
 	 *
 	 * @return the key counter map
 	 */
-	public HashMap<String, HashMap<String, HashMap<String, Long>>> getKeyCounterMap() {
+	public Map<String, Map<String, Map<String, Long>>> getKeyCounterMap() {
 		return keyCounterMap;
 	}
 
@@ -124,7 +138,7 @@ public class LockReply {
 	 *
 	 * @param keyCounterMap the key counter map
 	 */
-	public void setKeyCounterMap(HashMap<String, HashMap<String, HashMap<String, Long>>> keyCounterMap) {
+	public void setKeyCounterMap(Map<String, Map<String, Map<String, Long>>> keyCounterMap) {
 		this.keyCounterMap = keyCounterMap;
 	}
 	
@@ -136,14 +150,14 @@ public class LockReply {
 	 */
 	public void addKeyCounterPair(String keyGroup, String key, String conflictStr, long counter){
 		//get table
-		HashMap<String, HashMap<String, Long>> keyCounterMap = this.getKeyCounterMap().get(keyGroup);
+		Map<String, Map<String, Long>> keyCounterMap = this.getKeyCounterMap().get(keyGroup);
 		if(keyCounterMap == null){
-			keyCounterMap = new HashMap<String, HashMap<String, Long>>();
+			keyCounterMap = new Object2ObjectOpenHashMap<String, Map<String, Long>>();
 			this.getKeyCounterMap().put(keyGroup, keyCounterMap);
 		}
 		
 		//get key name
-		HashMap<String, Long> counterSet = keyCounterMap.get(key);
+		Map<String, Long> counterSet = keyCounterMap.get(key);
 		if(counterSet == null){
 			counterSet = new HashMap<String, Long>();
 			keyCounterMap.put(key, counterSet);
@@ -167,7 +181,7 @@ public class LockReply {
 		this.setOpName(dis.readUTF());
 		this.setProtocolType(dis.readInt());
 		int numOfKeyGroups = dis.readInt();
-		this.setKeyCounterMap(new HashMap<String, HashMap<String, HashMap<String, Long>>>());
+		this.setKeyCounterMap(new Object2ObjectOpenHashMap<String, Map<String, Map<String, Long>>>());
 		while(numOfKeyGroups > 0){
 			String keyGroupStr = dis.readUTF();
 			int numOfKeys = dis.readInt();
@@ -261,9 +275,9 @@ public class LockReply {
 	}
 	
 	private long getCounterByName(String tableName, String primaryKeyName, String operationName){
-		HashMap<String, HashMap<String, Long>> secondLevelMap = this.getKeyCounterMap().get(tableName);
+		Map<String, Map<String, Long>> secondLevelMap = this.getKeyCounterMap().get(tableName);
 		if(secondLevelMap != null){
-			HashMap<String, Long> thirdLevelMap = secondLevelMap.get(primaryKeyName);
+			Map<String, Long> thirdLevelMap = secondLevelMap.get(primaryKeyName);
 			if(thirdLevelMap != null){
 				if(thirdLevelMap.containsKey(operationName)){
 					return thirdLevelMap.get(operationName).longValue();
@@ -353,6 +367,14 @@ public class LockReply {
 
 	public void setProtocolType(int protocolType) {
 		this.protocolType = protocolType;
+	}
+
+	public Set<ProxyTxnId> getBarrierInstancesForWait() {
+		return barrierInstancesForWait;
+	}
+
+	public void setBarrierInstancesForWait(Set<ProxyTxnId> barrierInstancesForWait) {
+		this.barrierInstancesForWait = barrierInstancesForWait;
 	}
 
 }

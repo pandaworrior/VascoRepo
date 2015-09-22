@@ -32,6 +32,8 @@ public class MessageFactory{
 	
 	/** The Lock rep m pool. */
 	public ObjectPool<LockRepMessage> LockRepMPool;
+	
+	public ObjectPool<CleanUpBarrierMessage> CleanUpBarrierMPool;
 
     /**
      * Instantiates a new message factory.
@@ -39,6 +41,7 @@ public class MessageFactory{
     public MessageFactory(){
     	LockReqMPool = new ObjectPool<LockReqMessage>();
     	LockRepMPool = new ObjectPool<LockRepMessage>();
+    	CleanUpBarrierMPool = new ObjectPool<CleanUpBarrierMessage>();
     }
 
     /**
@@ -69,6 +72,14 @@ public class MessageFactory{
 			else{
 				pMsg.decodeMessage(bytes);
 				return pMsg;
+			}
+		case MessageTags.CLEANUPBARRIER:
+			CleanUpBarrierMessage cbMsg = CleanUpBarrierMPool.borrowObject();
+			if(cbMsg == null){
+				return new CleanUpBarrierMessage(bytes);
+			}else{
+				cbMsg.decodeMessage(bytes);
+				return cbMsg;
 			}
 		default:
 	
@@ -114,6 +125,15 @@ public class MessageFactory{
     public void returnLockRepMessage(LockRepMessage msg){
     	msg.reset();
     	LockRepMPool.returnObject(msg);
+    }
+    
+    public CleanUpBarrierMessage borrowCleanUpBarrierMessage(){
+    	return CleanUpBarrierMPool.borrowObject();
+    }
+    
+    public void returnCleanUpBarrierMessage(CleanUpBarrierMessage msg){
+    	msg.reset();
+    	CleanUpBarrierMPool.returnObject(msg);
     }
 
 }

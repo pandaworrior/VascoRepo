@@ -94,4 +94,12 @@ public class VascoServiceAgent {
 		this.client = new MessageHandlerClientSide(memFile, Role.LOCKCLIENT, clientId);
 		this.client.setUp();
 	}
+
+	public ConflictTable getConfTable() {
+		return confTable;
+	}
+
+	public void setConfTable(ConflictTable confTable) {
+		this.confTable = confTable;
+	}
 }

@@ -88,7 +88,8 @@ public class AsymCounterMap {
 	 * @param nonBarrierOpName the non barrier op name
 	 * @return the list of barrier instances and update local counter
 	 */
-	public Set<ProxyTxnId> getListOfBarrierInstancesAndUpdateLocalCounter(Map<String, List<String>> tableKeyMap, List<String> conflictBarrierOpNames,
+	public Set<ProxyTxnId> getListOfBarrierInstancesAndUpdateLocalCounter(Map<String, Set<String>> tableKeyMap, 
+			Set<String> conflictBarrierOpNames,
 			String nonBarrierOpName){
 		
 		//initiate the return value
@@ -106,7 +107,7 @@ public class AsymCounterMap {
 			}
 			
 			//iterate all keys that are interested
-			List<String> keyList = tableKeyMap.get(tableName);
+			Set<String> keyList = tableKeyMap.get(tableName);
 			for(String keyName : keyList){
 				//read the meta data for that key
 				ObjectOpenHashSet<AsymCounter> counterSetForKey = (ObjectOpenHashSet<AsymCounter>) secondLevelMap.get(keyName);
@@ -151,9 +152,10 @@ public class AsymCounterMap {
 	 * @param tableKeyMap the table key map
 	 * @param nonBarrierOpName the non barrier op name
 	 */
-	private void updateGlobalCountForNonBarrierOpByOne(Map<String, List<String>> tableKeyMap, String nonBarrierOpName){
+	private void updateGlobalCountForNonBarrierOpByOne(Map<String, Set<String>> tableKeyMap, 
+			String nonBarrierOpName){
 		for(String tableName : tableKeyMap.keySet()){
-			List<String> keyList = tableKeyMap.get(tableName);//read the key list touched by the operation
+			Set<String> keyList = tableKeyMap.get(tableName);//read the key list touched by the operation
 			Map<String, Set<AsymCounter>> secondLevelMap = this.getCounterMap().get(tableName);//get the meta data map
 				
 			if(secondLevelMap != null){
@@ -182,7 +184,7 @@ public class AsymCounterMap {
 	 * @param tableKeyMap the table key map
 	 * @param nonBarrierOpName the non barrier op name
 	 */
-	public void completeLocalNonBarrierOpCleanUp(Map<String, List<String>> tableKeyMap, String nonBarrierOpName){
+	public void completeLocalNonBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap, String nonBarrierOpName){
 		this.updateGlobalCountForNonBarrierOpByOne(tableKeyMap, nonBarrierOpName);
 	}
 	
@@ -192,7 +194,7 @@ public class AsymCounterMap {
 	 * @param tableKeyMap the table key map
 	 * @param nonBarrierOpName the non barrier op name
 	 */
-	public void completeRemoteNonBarrierOpCleanUp(Map<String, List<String>> tableKeyMap, String nonBarrierOpName){
+	public void completeRemoteNonBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap, String nonBarrierOpName){
 		this.updateGlobalCountForNonBarrierOpByOne(tableKeyMap, nonBarrierOpName);
 	}
 
@@ -210,8 +212,8 @@ public class AsymCounterMap {
 	 * @return the map of non barrier op counters and place barrier
 	 */
 	public Map<String, Map<String, Map<String, Long>>> getMapOfNonBarrierOpCountersAndPlaceBarrier(
-			Map<String, List<String>> tableKeyMap,
-			List<String> conflictBarrierOpNames, ProxyTxnId barrierId,
+			Map<String, Set<String>> tableKeyMap,
+			Set<String> conflictNonBarrierOpNames, ProxyTxnId barrierId,
 			String barrierOpName) {
 
 		Map<String, Map<String, Map<String, Long>>> counterMap = new Object2ObjectOpenHashMap<String, Map<String, Map<String, Long>>>();
@@ -227,7 +229,7 @@ public class AsymCounterMap {
 			}
 			
 			//iterate all keys that are interested
-			List<String> keyList = tableKeyMap.get(tableName);
+			Set<String> keyList = tableKeyMap.get(tableName);
 	
 			Map<String, Map<String, Long>> keyCounterMap = new Object2ObjectOpenHashMap<String, Map<String, Long>>();
 			counterMap.put(tableName, keyCounterMap);
@@ -247,7 +249,7 @@ public class AsymCounterMap {
 				keyCounterMap.put(keyName, opCounterMap);
 	
 				// iterate the conflicting non-barrier operation you are interested
-				for (String operationName : conflictBarrierOpNames) {
+				for (String operationName : conflictNonBarrierOpNames) {
 								
 					AsymCounter nbCounter = counterSetForKey.get(operationName);
 					if(nbCounter == null){
@@ -282,11 +284,11 @@ public class AsymCounterMap {
 	 * @param operationName the operation name
 	 * @param txnId the txn id
 	 */
-	private void completeBarrierOpCleanUp(Map<String, List<String>> tableKeyMap,
+	private void completeBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap,
 			String operationName, ProxyTxnId txnId){
 		
 		for(String tableName : tableKeyMap.keySet()){
-			List<String> keyList = tableKeyMap.get(tableName);//read the key list touched by the operation
+			Set<String> keyList = tableKeyMap.get(tableName);//read the key list touched by the operation
 			Map<String, Set<AsymCounter>> secondLevelMap = this.getCounterMap().get(tableName);//get the meta data map
 				
 			if(secondLevelMap != null){
@@ -320,7 +322,7 @@ public class AsymCounterMap {
 	 * @param operationName the operation name
 	 * @param txnId the txn id
 	 */
-	public void completeLocalBarrierOpCleanUp(Map<String, List<String>> tableKeyMap,
+	public void completeLocalBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap,
 			String operationName, ProxyTxnId txnId){
 		this.completeBarrierOpCleanUp(tableKeyMap, operationName, txnId);
 	}
@@ -332,7 +334,7 @@ public class AsymCounterMap {
 	 * @param operationName the operation name
 	 * @param txnId the txn id
 	 */
-	public void completeRemoteBarrierOpCleanUp(Map<String, List<String>> tableKeyMap,
+	public void completeRemoteBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap,
 			String operationName, ProxyTxnId txnId){
 		this.completeBarrierOpCleanUp(tableKeyMap, operationName, txnId);
 	}
