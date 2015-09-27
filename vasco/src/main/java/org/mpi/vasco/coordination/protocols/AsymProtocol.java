@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -90,7 +91,6 @@ public class AsymProtocol extends Protocol{
 			}
 			lcReply = lcReplyList.get(0);
 			lcReply.aggreLockReplies(lcReplyList);
-			lcReplyList.clear();
 		}else{
 			//if not, then get a list of barriers it should wait
 			//increment the corresponding local counters
@@ -175,8 +175,7 @@ public class AsymProtocol extends Protocol{
 		}
 	}
 	
-	public void cleanUpNonBarrierLocal(ProxyTxnId txnId){
-		LockRequest lcRequest = this.asymRequestMap.get(txnId);
+	public void cleanUpNonBarrierLocal(LockRequest lcRequest){
 		synchronized(this.counterMap){
 			this.counterMap.completeLocalNonBarrierOpCleanUp(lcRequest.getKeyList(), 
 				lcRequest.getOpName());
@@ -187,6 +186,27 @@ public class AsymProtocol extends Protocol{
 		//need to send a message to all clients
 		CleanUpBarrierMessage msg = new CleanUpBarrierMessage(txnId);
 		client.sentToAllLockClients(msg);
+	}
+	
+	@Override
+	public void cleanUp(ProxyTxnId txnId) {
+		LockRequest lcRequest = this.asymRequestMap.get(txnId);
+		Conflict c = this.getMessageClient().getAgent().getConfTable().getConflictByOpName(
+				lcRequest.getOpName(), 
+				Protocol.PROTOCOL_ASYM);
+		if(!c.isBarrier()){
+			//no barrier
+			this.cleanUpNonBarrierLocal(lcRequest);
+		}else{
+			//check it is local or remote
+			if(this.asymReplyMap.containsKey(txnId)){
+				//local, initially submitted to this site
+				this.cleanUpBarrierGlobal(txnId);
+				this.asymReplyMap.remove(txnId);
+			}else{
+				this.cleanUpBarrierLocal(txnId);
+			}
+		}
 	}
 
 	public AsymCounterMap getCounterMap() {
@@ -203,6 +223,45 @@ public class AsymProtocol extends Protocol{
 
 	public void setActiveBarriers(Set<ProxyTxnId> activeBarriers) {
 		this.activeBarriers = activeBarriers;
+	}
+
+	@Override
+	public void waitForBeExcuted(ProxyTxnId txnId, LockRequest lcR) {
+		LockReply lcReply = this.getPermission(txnId, lcR);
+		if(lcReply.getBarrierInstancesForWait() == null){
+			//that is a barrier op
+			//check whether all non-barrier ops it depends on have been applied
+			synchronized(this.counterMap){
+				while(!this.counterMap.isNonBarrierCountersMatching(lcReply.getKeyCounterMap())){
+					try {
+						this.counterMap.wait(VascoServiceAgentFactory.RESPONSE_WAITING_TIME_IN_MILL_SECONDS);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}else{
+			Set<ProxyTxnId> barriers = lcReply.getBarrierInstancesForWait();
+			if(!barriers.isEmpty()){
+				synchronized(this.activeBarriers){
+					Iterator<ProxyTxnId> barrierIds = barriers.iterator();
+					while(barrierIds.hasNext()){
+						ProxyTxnId bId = barrierIds.next();
+						if(!this.activeBarriers.contains(bId)){
+							barrierIds.remove();
+						}
+					}
+					while(!barriers.isEmpty()){
+						try {
+							this.activeBarriers.wait();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+			//if no barriers to wait, then please immediately execute
+		}
 	}
 
 }

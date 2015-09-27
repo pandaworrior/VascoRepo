@@ -34,7 +34,7 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
     protected ConflictTable conflictTable;
 
     // keys: table name, second level key: keyname, values: counter set, third level key: conflict name, values: counter value
-    protected final Map<String, Map<String, Map<String, Long>>> counters=new HashMap<>();
+    protected Map<String, Map<String, Map<String, Long>>> counters=new HashMap<>();
 
     protected enum Command {getAndAdd}
 

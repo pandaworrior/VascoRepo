@@ -66,6 +66,9 @@ public abstract class Protocol {
 	 */
 	public abstract LockReply getLocalPermission(ProxyTxnId txnId, LockRequest lcR);
 	
+	
+	public abstract void waitForBeExcuted(ProxyTxnId txnId, LockRequest lcR);
+	
 	/**
 	 * Adds the lock reply.
 	 *
@@ -73,6 +76,9 @@ public abstract class Protocol {
 	 * @param lcReply the lc reply
 	 */
 	public abstract void addLockReply(ProxyTxnId txnId, LockReply lcReply);
+	
+	
+	public abstract void cleanUp(ProxyTxnId txnId);
 	
 	
 	/**

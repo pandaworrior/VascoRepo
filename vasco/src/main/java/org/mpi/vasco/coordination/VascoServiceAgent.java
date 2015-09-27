@@ -83,6 +83,23 @@ public class VascoServiceAgent {
 		}
 		return this.getProtocol(protocolType).getPermission(txnId, lcR);
 	}
+	
+	public void cleanUpOperation(ProxyTxnId txnId, int protocolType){
+		Protocol p = this.getProtocol(protocolType);
+		p.cleanUp(txnId);
+	}
+	
+	/*Call before committing the transaction*/
+	public void waitForBeExecuted(ProxyTxnId txnId, LockRequest lcR){
+		if(lcR == null){
+			// the operations do not need to be coordinated
+			return;
+		}
+		int protocolType = this.getProtocolType(lcR);
+		if(protocolType != -1){
+			this.getProtocol(protocolType).waitForBeExcuted(txnId, lcR);
+		}
+	}
 
 	/**
 	 * Sets the up client.

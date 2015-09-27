@@ -17,10 +17,12 @@
 package org.mpi.vasco.coordination.protocols.util.asym;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap.Entry;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap.FastEntrySet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -337,5 +339,53 @@ public class AsymCounterMap {
 	public void completeRemoteBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap,
 			String operationName, ProxyTxnId txnId){
 		this.completeBarrierOpCleanUp(tableKeyMap, operationName, txnId);
+	}
+	
+	//check the non barrier operations a barrier operation depends on already applied
+	public boolean isNonBarrierCountersMatching(Map<String, Map<String, Map<String, Long>>> nonBarrierKeyCounters){
+		//please check whether all non-barrier operations have been applied
+		//If so, please remove it from the map, otherwise, keep it
+		
+		Iterator itSecondLevel = nonBarrierKeyCounters.entrySet().iterator();
+		while(itSecondLevel.hasNext()){
+			Entry<String, Map<String, Map<String, Long>>> entrySecondLevel = (Entry<String, Map<String, Map<String, Long>>>) itSecondLevel.next();
+			String tableName = entrySecondLevel.getKey();
+			
+			//fetch metadata from the main counter map
+			Map<String, Set<AsymCounter>> secondLevelMap = this.getCounterMap().get(tableName);
+			
+			Iterator itThirdLevel = entrySecondLevel.getValue().entrySet().iterator();
+			while(itThirdLevel.hasNext()){
+				Entry<String, Map<String, Long>> entryThirdLevel = (Entry<String, Map<String, Long>>) itThirdLevel.next();
+				String keyName = entryThirdLevel.getKey();
+				
+				//get key counter set
+				ObjectOpenHashSet<AsymCounter> counterSetForKey = (ObjectOpenHashSet<AsymCounter>) secondLevelMap.get(keyName);
+				
+				Iterator itFourthLevel = entryThirdLevel.getValue().entrySet().iterator();
+				while(itFourthLevel.hasNext()){
+					Entry<String, Long> entryFourthLevel = (Entry<String, Long>) itFourthLevel.next();
+					String opName = entryFourthLevel.getKey();
+					
+					AsymNonBarrierCounter bCounter = (AsymNonBarrierCounter) counterSetForKey.get(opName);
+					
+					if(bCounter.getGlobalCount() >= entryFourthLevel.getValue().longValue()){
+						itFourthLevel.remove();
+					}
+				}
+				if(entryThirdLevel.getValue().isEmpty()){
+					itThirdLevel.remove();
+				}
+			}
+			
+			if(entrySecondLevel.getValue().isEmpty()){
+				itSecondLevel.remove();
+			}
+			
+		}
+		if(nonBarrierKeyCounters.isEmpty()){
+			return true;
+		}
+		return false;
 	}
 }

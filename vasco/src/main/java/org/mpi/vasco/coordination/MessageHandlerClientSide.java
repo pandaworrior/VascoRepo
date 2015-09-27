@@ -99,7 +99,7 @@ public class MessageHandlerClientSide extends BaseNode{
 			throw new RuntimeException("No such a protocol " + Protocol.PROTOCOL_ASYM);
 		}
 		
-		((AsymProtocol)p).cleanUpNonBarrierLocal(msg.getProxyTxnId());
+		p.cleanUp(msg.getProxyTxnId());
 	}
 
 	@Override
