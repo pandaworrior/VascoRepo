@@ -5,11 +5,14 @@ import org.jgroups.Global;
 import org.jgroups.protocols.raft.*;
 import org.jgroups.raft.RaftHandle;
 import org.jgroups.util.*;
+import org.mpi.vasco.coordination.VascoServiceAgentFactory;
 import org.mpi.vasco.coordination.protocols.util.ConflictTable;
 import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.util.debug.Debug;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -33,14 +36,16 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
     
     protected ConflictTable conflictTable;
 
-    // keys: table name, second level key: keyname, values: counter set, third level key: conflict name, values: counter value
-    protected Map<String, Map<String, Map<String, Long>>> counters=new HashMap<>();
+    // first level { key: table name + key, value : a set of counters for operations}
+    // second level { key: conflicting operation name, values: counter value}
+    protected Map<String, Map<String, Long>> counters;
 
     protected enum Command {getAndAdd}
 
 
     public CounterService(Channel ch) {
         setChannel(ch);
+        this.setCounters(new Object2ObjectOpenHashMap<String, Map<String, Long>>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE));
     }
 
     public void setChannel(Channel ch) {
@@ -81,18 +86,15 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
 
     public String printCounters() {
         StringBuilder sb=new StringBuilder();
-        for(Map.Entry<String, Map<String, Map<String, Long>>> fstLEntry: counters.entrySet()) {
-        	sb.append("Table: " + fstLEntry.getKey() + "\n");
-        	for(Map.Entry<String, Map<String, Long>> sndLEntry : fstLEntry.getValue().entrySet()){
-        		sb.append("Key: " + sndLEntry.getKey() + " {");
-        		for(Map.Entry<String, Long> trdLEntry : sndLEntry.getValue().entrySet()){
-        			sb.append("(counter,  "+trdLEntry.getKey() + " value " + trdLEntry.getValue().longValue() + ",");
-        		}
-        		if(sb.charAt(sb.length() - 1) == ','){
-        			sb.deleteCharAt(sb.length() - 1);
-        		}
-        		sb.append("}\n");
+        for(Map.Entry<String, Map<String, Long>> fstLEntry: counters.entrySet()) {
+        	sb.append("key: " + fstLEntry.getKey() + "\n");
+        	sb.append("{");
+        	for(Map.Entry<String, Long> sndLEntry : fstLEntry.getValue().entrySet()){
+        		sb.append("op: " + sndLEntry.getKey() + ",");
+        		sb.append(" value: ");
+        		sb.append(sndLEntry.getValue().longValue());
         	}
+        	sb.append("}\n");
         }
         return sb.toString();
     }
@@ -233,7 +235,7 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
         return sb.toString();
     }
 
-    //{tableName, {key, {(countername, longvalue)}}
+    //{compoundKey, {(countername, longvalue)}
     protected LockReply _getAndAdd(LockRequest lrRequest) {
     	Debug.println("Execute get and add for request " + lrRequest.toString() + "\n");
     	LockReply lcReply = new LockReply(lrRequest.getOpName(), Protocol.PROTOCOL_SYM);
@@ -241,32 +243,33 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
     	Set<String> conflicts = this.conflictTable.getConflictByOpName(lrRequest.getOpName(), Protocol.PROTOCOL_SYM).getConfList();
     	
         synchronized(counters) {
-        	for(Map.Entry<String, Set<String>> tableMap : lrRequest.getKeyList().entrySet()){
-        		Map<String, Map<String, Long>> keyCounterMap = this.counters.get(tableMap.getKey());
-        		if(keyCounterMap == null){
-        			keyCounterMap = new HashMap<String, Map<String, Long>>();
-        			this.counters.put(tableMap.getKey(), keyCounterMap);
+        	for(String keyStr : lrRequest.getKeyList()){
+        		Map<String, Long> countersPerKey = this.getCounters().get(keyStr);
+        		if(countersPerKey == null){
+        			countersPerKey = new Object2ObjectOpenHashMap<String, Long>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE);
+        			this.counters.put(keyStr, countersPerKey);
         		}
-        		for(String key : tableMap.getValue()){
-        			Map<String, Long> counterSet = keyCounterMap.get(key);
-        			if(counterSet == null){
-        				counterSet = new HashMap<String, Long>();
-        				keyCounterMap.put(key, counterSet);
+        		for(String conflictStr : conflicts){
+    				Long counter = countersPerKey.get(conflictStr);
+        			if(counter == null){
+        				lcReply.addKeyCounterPair(keyStr, conflictStr, 0L);
+        				countersPerKey.put(conflictStr, 1L);
+        			}else{
+        				lcReply.addKeyCounterPair(keyStr, conflictStr, counter.longValue());
+        				countersPerKey.put(conflictStr, counter.longValue() + 1L);
         			}
-        			for(String conflictStr : conflicts){
-        				Long counter = counterSet.get(conflictStr);
-	        			if(counter == null){
-	        				lcReply.addKeyCounterPair(tableMap.getKey(), key, conflictStr, 0L);
-	        				counterSet.put(conflictStr, 1L);
-	        			}else{
-	        				lcReply.addKeyCounterPair(tableMap.getKey(), key, conflictStr, counter.longValue());
-	        				counterSet.put(key, counter.longValue() + 1L);
-	        			}
-        			}
-        		}
+    			}
         	}
             return lcReply;
         }
     }
+
+	public Map<String, Map<String, Long>> getCounters() {
+		return counters;
+	}
+
+	public void setCounters(Map<String, Map<String, Long>> counters) {
+		this.counters = counters;
+	}
 
 }

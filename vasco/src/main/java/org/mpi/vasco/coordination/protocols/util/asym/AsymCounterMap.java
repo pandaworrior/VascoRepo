@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.mpi.vasco.coordination.VascoServiceAgentFactory;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.util.debug.Debug;
 
@@ -36,32 +37,23 @@ import org.mpi.vasco.util.debug.Debug;
  */
 public class AsymCounterMap {
 	
-	/** The counter map. */
-	Map<String, Map<String, Set<AsymCounter>>> counterMap;
-	
-	/** The first level map capacity. */
-	private static int FIRST_LEVEL_MAP_CAPACITY = 12;
-	
-	/** The second level map capacity. */
-	private static int SECOND_LEVEL_MAP_CAPACITY = 1000;
+	/** The counter map. 
+	 * first level key: compoundKey
+	 * second level key: opName
+	 * */
+	Map<String, Set<AsymCounter>> counterMap;
 	
 	/**
 	 * Instantiates a new asym counter map.
 	 */
 	public AsymCounterMap(){
-		this.counterMap = new Object2ObjectOpenHashMap<String, Map<String, Set<AsymCounter>>>(FIRST_LEVEL_MAP_CAPACITY);
+		this.counterMap = new Object2ObjectOpenHashMap<String, Set<AsymCounter>>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE);
 	}
 	
-	/**
-	 * Initiate second level map.
-	 *
-	 * @param tableName the table name
-	 * @return the map
-	 */
-	private Map<String, Set<AsymCounter>> initiateSecondLevelMap(String tableName){
-		Map<String, Set<AsymCounter>> keyValueMap = new Object2ObjectOpenHashMap<String, Set<AsymCounter>>(SECOND_LEVEL_MAP_CAPACITY);
-		this.counterMap.put(tableName, keyValueMap);
-		return keyValueMap;
+	private Set<AsymCounter> initiateCounterSetPerKey(String keyStr){
+		Set<AsymCounter> counterSetPerKey = new ObjectOpenHashSet<AsymCounter>(VascoServiceAgentFactory.SMALL_SET_INITIAL_SIZE); 
+		this.counterMap.put(keyStr, counterSetPerKey);
+		return counterSetPerKey;
 	}
 
 	/**
@@ -69,7 +61,7 @@ public class AsymCounterMap {
 	 *
 	 * @return the counter map
 	 */
-	public Map<String, Map<String, Set<AsymCounter>>> getCounterMap() {
+	public Map<String, Set<AsymCounter>> getCounterMap() {
 		return counterMap;
 	}
 
@@ -78,71 +70,50 @@ public class AsymCounterMap {
 	 *
 	 * @param counterMap the counter map
 	 */
-	public void setCounterMap(Map<String, Map<String, Set<AsymCounter>>> counterMap) {
+	public void setCounterMap(Map<String, Set<AsymCounter>> counterMap) {
 		this.counterMap = counterMap;
 	}
 	
-	/**
-	 * Gets the list of barrier instances and update local counter.
-	 *
-	 * @param tableKeyMap the table key map
-	 * @param conflictBarrierOpNames the conflict barrier op names
-	 * @param nonBarrierOpName the non barrier op name
-	 * @return the list of barrier instances and update local counter
-	 */
-	public Set<ProxyTxnId> getListOfBarrierInstancesAndUpdateLocalCounter(Map<String, Set<String>> tableKeyMap, 
+
+	public Set<ProxyTxnId> getListOfBarrierInstancesAndUpdateLocalCounter(Set<String> keys, 
 			Set<String> conflictBarrierOpNames,
 			String nonBarrierOpName){
 		
 		//initiate the return value
 		Set<ProxyTxnId> barrierInstances = new ObjectOpenHashSet<ProxyTxnId>();
 		
-		for(String tableName : tableKeyMap.keySet()){
-			
+		//iterate all keys that are interested
+		for(String keyStr : keys){
 			// get the meta data map
-			Map<String, Set<AsymCounter>> secondLevelMap = this.getCounterMap()
-					.get(tableName);
-			if(secondLevelMap == null){
-				//if the meta data map is empty then please populate it first
-				secondLevelMap = this.initiateSecondLevelMap(tableName);
-				this.getCounterMap().put(tableName, secondLevelMap);
+			ObjectOpenHashSet<AsymCounter> counterSetPerKey = (ObjectOpenHashSet<AsymCounter>)this.getCounterMap().get(keyStr);
+			if(counterSetPerKey == null){
+				counterSetPerKey = (ObjectOpenHashSet<AsymCounter>) this.initiateCounterSetPerKey(keyStr);
 			}
 			
-			//iterate all keys that are interested
-			Set<String> keyList = tableKeyMap.get(tableName);
-			for(String keyName : keyList){
-				//read the meta data for that key
-				ObjectOpenHashSet<AsymCounter> counterSetForKey = (ObjectOpenHashSet<AsymCounter>) secondLevelMap.get(keyName);
-				if(counterSetForKey == null){
-					counterSetForKey = new ObjectOpenHashSet<AsymCounter>();
-					secondLevelMap.put(keyName, counterSetForKey);
-				}
-				
-				//iterate the conflicting barrier operation you are interested
-				for(String operationName : conflictBarrierOpNames){
-					AsymCounter bCounter = counterSetForKey.get(operationName);
-					if(bCounter == null){
-						bCounter = new AsymBarrierCounter(operationName);
-						counterSetForKey.add(bCounter);
-					}else{
-						if(!(bCounter instanceof AsymBarrierCounter)){
-							throw new RuntimeException("The barrier is not AsymBarrierCounter " + bCounter.toString());
-						}
+			//iterate the conflicting barrier operation you are interested
+			for(String operationName : conflictBarrierOpNames){
+				AsymCounter bCounter = counterSetPerKey.get(operationName);
+				if(bCounter == null){
+					bCounter = new AsymBarrierCounter(operationName);
+					counterSetPerKey.add(bCounter);
+				}else{
+					if(!(bCounter instanceof AsymBarrierCounter)){
+						throw new RuntimeException("The barrier is not AsymBarrierCounter " + bCounter.toString());
 					}
-					
-					//add all active barrier instances to the return set
-					barrierInstances.addAll(((AsymBarrierCounter)bCounter).getActiveBarrierTxnIdSet());
 				}
 				
-				//add local instance of non-barrier op
-				AsymCounter nbCounter = counterSetForKey.get(nonBarrierOpName);
-				if(nbCounter == null){
-					//add local counter there if no exists
-					nbCounter = new AsymNonBarrierCounter(tableName);
-					counterSetForKey.add(nbCounter);
-				}
-				((AsymNonBarrierCounter) nbCounter).addLocalInstance();
+				//add all active barrier instances to the return set
+				barrierInstances.addAll(((AsymBarrierCounter)bCounter).getActiveBarrierTxnIdSet());
 			}
+			
+			//add local instance of non-barrier op
+			AsymCounter nbCounter = counterSetPerKey.get(nonBarrierOpName);
+			if(nbCounter == null){
+				//add local counter there if no exists
+				nbCounter = new AsymNonBarrierCounter(nonBarrierOpName);
+				counterSetPerKey.add(nbCounter);
+			}
+			((AsymNonBarrierCounter) nbCounter).addLocalInstance();
 		}
 		
 		return barrierInstances;
@@ -154,28 +125,23 @@ public class AsymCounterMap {
 	 * @param tableKeyMap the table key map
 	 * @param nonBarrierOpName the non barrier op name
 	 */
-	private void updateGlobalCountForNonBarrierOpByOne(Map<String, Set<String>> tableKeyMap, 
+	private void updateGlobalCountForNonBarrierOpByOne(Set<String> keys, 
 			String nonBarrierOpName){
-		for(String tableName : tableKeyMap.keySet()){
-			Set<String> keyList = tableKeyMap.get(tableName);//read the key list touched by the operation
-			Map<String, Set<AsymCounter>> secondLevelMap = this.getCounterMap().get(tableName);//get the meta data map
-				
-			if(secondLevelMap != null){
-				for(String keyName : keyList){//iterate the keys you target
-					ObjectOpenHashSet<AsymCounter> counterSetForKey = (ObjectOpenHashSet<AsymCounter>) secondLevelMap.get(keyName);
-					if(counterSetForKey != null){
-						AsymCounter nbCounter = counterSetForKey.get(nonBarrierOpName);
-						if(nbCounter != null){
-							((AsymNonBarrierCounter) nbCounter).completeLocalInstance();
-						}else{
-							throw new RuntimeException(nonBarrierOpName + " counter not exists!");
-						}
-					}else{
-						throw new RuntimeException(keyName + " not exists!");
-					}
+		
+		//read the key list touched by the operation
+		for(String keyStr : keys){
+			//get the meta data map
+			ObjectOpenHashSet<AsymCounter> counterSetPerKey = (ObjectOpenHashSet<AsymCounter>)this.getCounterMap().get(keyStr);
+			
+			if(counterSetPerKey != null){
+				AsymCounter nbCounter = counterSetPerKey.get(nonBarrierOpName);
+				if(nbCounter != null){
+					((AsymNonBarrierCounter) nbCounter).completeLocalInstance();
+				}else{
+					throw new RuntimeException(nonBarrierOpName + " counter not exists!");
 				}
 			}else{
-				throw new RuntimeException(tableName + " not exists!");
+				throw new RuntimeException("key " + keyStr + " not exists!");
 			}
 		}
 	}
@@ -186,8 +152,8 @@ public class AsymCounterMap {
 	 * @param tableKeyMap the table key map
 	 * @param nonBarrierOpName the non barrier op name
 	 */
-	public void completeLocalNonBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap, String nonBarrierOpName){
-		this.updateGlobalCountForNonBarrierOpByOne(tableKeyMap, nonBarrierOpName);
+	public void completeLocalNonBarrierOpCleanUp(Set<String> keys, String nonBarrierOpName){
+		this.updateGlobalCountForNonBarrierOpByOne(keys, nonBarrierOpName);
 	}
 	
 	/**
@@ -196,8 +162,8 @@ public class AsymCounterMap {
 	 * @param tableKeyMap the table key map
 	 * @param nonBarrierOpName the non barrier op name
 	 */
-	public void completeRemoteNonBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap, String nonBarrierOpName){
-		this.updateGlobalCountForNonBarrierOpByOne(tableKeyMap, nonBarrierOpName);
+	public void completeRemoteNonBarrierOpCleanUp(Set<String> keys, String nonBarrierOpName){
+		this.updateGlobalCountForNonBarrierOpByOne(keys, nonBarrierOpName);
 	}
 
 	/**
@@ -213,69 +179,47 @@ public class AsymCounterMap {
 	 *            the barrier op name
 	 * @return the map of non barrier op counters and place barrier
 	 */
-	public Map<String, Map<String, Map<String, Long>>> getMapOfNonBarrierOpCountersAndPlaceBarrier(
-			Map<String, Set<String>> tableKeyMap,
+	public Map<String, Map<String, Long>> getMapOfNonBarrierOpCountersAndPlaceBarrier(
+			Set<String> keys,
 			Set<String> conflictNonBarrierOpNames, ProxyTxnId barrierId,
 			String barrierOpName) {
 
-		Map<String, Map<String, Map<String, Long>>> counterMap = new Object2ObjectOpenHashMap<String, Map<String, Map<String, Long>>>();
-
-		for (String tableName : tableKeyMap.keySet()) {
-			
-			Map<String, Set<AsymCounter>> secondLevelMap = this.getCounterMap()
-					.get(tableName);// get the meta data map
-			
-			if(secondLevelMap == null){
-				secondLevelMap = this.initiateSecondLevelMap(tableName);
-				this.getCounterMap().put(tableName, secondLevelMap);
+		Map<String, Map<String, Long>> counterAllMap = new Object2ObjectOpenHashMap<String, Map<String, Long>>();
+		
+		for(String keyStr : keys){
+			// get the meta data map
+			ObjectOpenHashSet<AsymCounter> counterSetPerKey = (ObjectOpenHashSet<AsymCounter>)this.getCounterMap().get(keyStr);
+			if(counterSetPerKey == null){
+				counterSetPerKey = (ObjectOpenHashSet<AsymCounter>) this.initiateCounterSetPerKey(keyStr);
 			}
 			
-			//iterate all keys that are interested
-			Set<String> keyList = tableKeyMap.get(tableName);
-	
-			Map<String, Map<String, Long>> keyCounterMap = new Object2ObjectOpenHashMap<String, Map<String, Long>>();
-			counterMap.put(tableName, keyCounterMap);
-			
-			// iterate the keys you target
-			for (String keyName : keyList) {
-				//get meta data for that key
-				ObjectOpenHashSet<AsymCounter> counterSetForKey = (ObjectOpenHashSet<AsymCounter>) secondLevelMap
-								.get(keyName);
-				
-				if(counterSetForKey == null){
-					counterSetForKey = new ObjectOpenHashSet<AsymCounter>();
-					secondLevelMap.put(keyName, counterSetForKey);
-				}
-				
-				Map<String, Long> opCounterMap = new Object2ObjectOpenHashMap<String, Long>();
-				keyCounterMap.put(keyName, opCounterMap);
-	
-				// iterate the conflicting non-barrier operation you are interested
-				for (String operationName : conflictNonBarrierOpNames) {
-								
-					AsymCounter nbCounter = counterSetForKey.get(operationName);
-					if(nbCounter == null){
-						nbCounter = new AsymNonBarrierCounter(operationName);
-						counterSetForKey.add(nbCounter);
-					}else{
-						if (!(nbCounter instanceof AsymNonBarrierCounter)) {
-							throw new RuntimeException("The barrier is not AsymNonBarrierCounter "+ nbCounter.toString());
-						}
+			Map<String, Long> counterPerKeyMap = new Object2ObjectOpenHashMap<String, Long>();
+			counterAllMap.put(keyStr, counterPerKeyMap);
+			// iterate the conflicting non-barrier operation you are interested
+			for (String operationName : conflictNonBarrierOpNames) {
+							
+				AsymCounter nbCounter = counterSetPerKey.get(operationName);
+				if(nbCounter == null){
+					nbCounter = new AsymNonBarrierCounter(operationName);
+					counterSetPerKey.add(nbCounter);
+				}else{
+					if (!(nbCounter instanceof AsymNonBarrierCounter)) {
+						throw new RuntimeException("The barrier is not AsymNonBarrierCounter "+ nbCounter.toString());
 					}
-					opCounterMap.put(nbCounter.getCounterName(), ((AsymNonBarrierCounter) nbCounter).getLocalCount());
 				}
-				
-				//add barrier op for that key and that table
-				AsymCounter bCounter = counterSetForKey.get(barrierOpName);
-				if (bCounter == null) {
-					bCounter = new AsymBarrierCounter(barrierOpName);
-					counterSetForKey.add(bCounter);
-				}
-				((AsymBarrierCounter) bCounter).addBarrierInstance(barrierId);
+				counterPerKeyMap.put(nbCounter.getCounterName(), ((AsymNonBarrierCounter) nbCounter).getLocalCount());
 			}
+			
+			//add barrier op for that key and that table
+			AsymCounter bCounter = counterSetPerKey.get(barrierOpName);
+			if (bCounter == null) {
+				bCounter = new AsymBarrierCounter(barrierOpName);
+				counterSetPerKey.add(bCounter);
+			}
+			((AsymBarrierCounter) bCounter).addBarrierInstance(barrierId);
 		}
-
-		return counterMap;
+		
+		return counterAllMap;
 	}
 	
 	
@@ -286,33 +230,26 @@ public class AsymCounterMap {
 	 * @param operationName the operation name
 	 * @param txnId the txn id
 	 */
-	private void completeBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap,
+	private void completeBarrierOpCleanUp(Set<String> keys,
 			String operationName, ProxyTxnId txnId){
 		
-		for(String tableName : tableKeyMap.keySet()){
-			Set<String> keyList = tableKeyMap.get(tableName);//read the key list touched by the operation
-			Map<String, Set<AsymCounter>> secondLevelMap = this.getCounterMap().get(tableName);//get the meta data map
-				
-			if(secondLevelMap != null){
-				for(String keyName : keyList){//iterate the keys you target
-					ObjectOpenHashSet<AsymCounter> counterSetForKey = (ObjectOpenHashSet<AsymCounter>) secondLevelMap.get(keyName);
-					if(counterSetForKey != null){
-						AsymCounter bCounter = counterSetForKey.get(operationName);
-						if(bCounter != null){
-							if(bCounter instanceof AsymBarrierCounter){
-								((AsymBarrierCounter) bCounter).removeBarrierInstance(txnId);
-							}else{
-								throw new RuntimeException(bCounter.toString() + " is not a barrier counter!");
-							}
-						}else{
-							throw new RuntimeException(operationName + " counter not exists!");
-						}
+		//read the key list touched by the operation
+		for(String keyStr : keys){
+			//get the meta data map
+			ObjectOpenHashSet<AsymCounter> counterSetPerKey = (ObjectOpenHashSet<AsymCounter>)this.getCounterMap().get(keyStr);
+			if(counterSetPerKey != null){
+				AsymCounter bCounter = counterSetPerKey.get(operationName);
+				if(bCounter != null){
+					if(bCounter instanceof AsymBarrierCounter){
+						((AsymBarrierCounter) bCounter).removeBarrierInstance(txnId);
 					}else{
-						throw new RuntimeException(keyName + " not exists!");
+						throw new RuntimeException(bCounter.toString() + " is not a barrier counter!");
 					}
+				}else{
+					throw new RuntimeException(operationName + " counter not exists!");
 				}
 			}else{
-				throw new RuntimeException(tableName + " not exists!");
+				throw new RuntimeException(keyStr + " not exists!");
 			}
 		}
 	}
@@ -324,9 +261,9 @@ public class AsymCounterMap {
 	 * @param operationName the operation name
 	 * @param txnId the txn id
 	 */
-	public void completeLocalBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap,
+	public void completeLocalBarrierOpCleanUp(Set<String> keys,
 			String operationName, ProxyTxnId txnId){
-		this.completeBarrierOpCleanUp(tableKeyMap, operationName, txnId);
+		this.completeBarrierOpCleanUp(keys, operationName, txnId);
 	}
 
 	/**
@@ -336,52 +273,39 @@ public class AsymCounterMap {
 	 * @param operationName the operation name
 	 * @param txnId the txn id
 	 */
-	public void completeRemoteBarrierOpCleanUp(Map<String, Set<String>> tableKeyMap,
+	public void completeRemoteBarrierOpCleanUp(Set<String> keys,
 			String operationName, ProxyTxnId txnId){
-		this.completeBarrierOpCleanUp(tableKeyMap, operationName, txnId);
+		this.completeBarrierOpCleanUp(keys, operationName, txnId);
 	}
 	
 	//check the non barrier operations a barrier operation depends on already applied
-	public boolean isNonBarrierCountersMatching(Map<String, Map<String, Map<String, Long>>> nonBarrierKeyCounters){
+	public boolean isNonBarrierCountersMatching(Map<String, Map<String, Long>> nonBarrierKeyCounters){
 		//please check whether all non-barrier operations have been applied
 		//If so, please remove it from the map, otherwise, keep it
 		
 		Iterator itSecondLevel = nonBarrierKeyCounters.entrySet().iterator();
 		while(itSecondLevel.hasNext()){
-			Entry<String, Map<String, Map<String, Long>>> entrySecondLevel = (Entry<String, Map<String, Map<String, Long>>>) itSecondLevel.next();
-			String tableName = entrySecondLevel.getKey();
+			Entry<String, Map<String, Long>> entrySecondLevel = (Entry<String, Map<String, Long>>) itSecondLevel.next();
+			String keyStr = entrySecondLevel.getKey();
 			
-			//fetch metadata from the main counter map
-			Map<String, Set<AsymCounter>> secondLevelMap = this.getCounterMap().get(tableName);
+			//get key counter set
+			ObjectOpenHashSet<AsymCounter> counterSetForKey = (ObjectOpenHashSet<AsymCounter>) this.getCounterMap().get(keyStr);
 			
 			Iterator itThirdLevel = entrySecondLevel.getValue().entrySet().iterator();
 			while(itThirdLevel.hasNext()){
-				Entry<String, Map<String, Long>> entryThirdLevel = (Entry<String, Map<String, Long>>) itThirdLevel.next();
-				String keyName = entryThirdLevel.getKey();
+				Entry<String, Long> entryThirdLevel = (Entry<String, Long>) itThirdLevel.next();
+				String opName = entryThirdLevel.getKey();
 				
-				//get key counter set
-				ObjectOpenHashSet<AsymCounter> counterSetForKey = (ObjectOpenHashSet<AsymCounter>) secondLevelMap.get(keyName);
+				AsymNonBarrierCounter nbCounter = (AsymNonBarrierCounter) counterSetForKey.get(opName);
 				
-				Iterator itFourthLevel = entryThirdLevel.getValue().entrySet().iterator();
-				while(itFourthLevel.hasNext()){
-					Entry<String, Long> entryFourthLevel = (Entry<String, Long>) itFourthLevel.next();
-					String opName = entryFourthLevel.getKey();
-					
-					AsymNonBarrierCounter bCounter = (AsymNonBarrierCounter) counterSetForKey.get(opName);
-					
-					if(bCounter.getGlobalCount() >= entryFourthLevel.getValue().longValue()){
-						itFourthLevel.remove();
-					}
-				}
-				if(entryThirdLevel.getValue().isEmpty()){
+				if(nbCounter.getGlobalCount() >= entryThirdLevel.getValue().longValue()){
 					itThirdLevel.remove();
 				}
 			}
 			
 			if(entrySecondLevel.getValue().isEmpty()){
 				itSecondLevel.remove();
-			}
-			
+			}	
 		}
 		if(nonBarrierKeyCounters.isEmpty()){
 			return true;

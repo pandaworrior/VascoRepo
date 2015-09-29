@@ -45,8 +45,10 @@ public class SymProtocol extends Protocol{
 	private ConcurrentHashMap<ProxyTxnId, SymMetaData> symMetaDataMap;
 	
 	//locally maintain a copy of data on the centralized server
-	// keys: table name, second level key: keyname, values: counter set, third level key: conflict name, values: counter value
-    protected Map<String, Map<String, Map<String, Long>>> countersLocalCopy=new HashMap<>();
+	// first level key : tablename + primary key
+	// second level key : opName
+	// second level value : counter for <first_level_key, second_level_key>
+    protected Map<String, Map<String, Long>> countersLocalCopy;
 	
 	/**
 	 * Instantiates a new sym protocol.
@@ -57,6 +59,7 @@ public class SymProtocol extends Protocol{
 	public SymProtocol(MessageHandlerClientSide c) {
 		super(c);
 		this.symMetaDataMap = new ConcurrentHashMap<ProxyTxnId, SymMetaData>();
+		this.setCountersLocalCopy(new Object2ObjectOpenHashMap<String, Map<String, Long>>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE));
 	}
 
 	/* (non-Javadoc)
@@ -111,35 +114,22 @@ public class SymProtocol extends Protocol{
 		throw new RuntimeException("Not implemented yet!");
 	}
 	
-	private void incrementLocalCounterByOne(Map<String, Set<String>> tableKeyMap,
+	private void incrementLocalCounterByOne(Set<String> tableKeyMap,
 			String operationName){
 		synchronized(this.countersLocalCopy){
-			for(String tableName : tableKeyMap.keySet()){
-				//fetch metadata from the main counter map
-				Map<String, Map<String, Long>> secondLevelMap = this.countersLocalCopy.get(tableName);
-				if(secondLevelMap == null){
-					secondLevelMap = new Object2ObjectOpenHashMap<String, Map<String, Long>>();
-					this.countersLocalCopy.put(tableName, secondLevelMap);
+			for(String keyStr : tableKeyMap){
+				Map<String, Long> countersPerKey = this.countersLocalCopy.get(keyStr);
+				if(countersPerKey == null){
+					countersPerKey = new Object2ObjectOpenHashMap<String, Long>(VascoServiceAgentFactory.SMALL_MAP_INITIAL_SIZE);
+					this.countersLocalCopy.put(keyStr, countersPerKey);
 				}
-				
-				Set<String> keySet = tableKeyMap.get(tableName);
-				
-				for(String keyName : keySet){
-					//get key counter set
-					Map<String, Long> counterSetForKey = secondLevelMap.get(keyName);
-					if(counterSetForKey == null){
-						counterSetForKey = new Object2ObjectOpenHashMap<String, Long>();
-						secondLevelMap.put(keyName, counterSetForKey);
-					}
-					
-					Long counterValue = counterSetForKey.get(operationName);
-					if(counterValue == null){
-						counterValue = new Long(0L);
-					}else{
-						counterValue = new Long(1L);
-					}
-					counterSetForKey.put(operationName, counterValue);
+				Long counterValue = countersPerKey.get(operationName);
+				if(counterValue == null){
+					counterValue = new Long(1L);
+				}else{
+					counterValue = new Long(counterValue.longValue() + 1);
 				}
+				countersPerKey.put(operationName, counterValue);
 			}
 		}
 	}
@@ -151,55 +141,44 @@ public class SymProtocol extends Protocol{
 		this.incrementLocalCounterByOne(lcR.getKeyList(), lcR.getOpName());
 	}
 	
-	private boolean isCounterMatching(Map<String, Map<String, Map<String, Long>>> keyCounters){
-		Iterator itSecondLevel = keyCounters.entrySet().iterator();
-		while(itSecondLevel.hasNext()){
-			Entry<String, Map<String, Map<String, Long>>> entrySecondLevel = (Entry<String, Map<String, Map<String, Long>>>) itSecondLevel.next();
-			String tableName = entrySecondLevel.getKey();
+	private boolean isCounterMatching(Map<String, Map<String, Long>> keyCounters){
+		
+		Iterator itKeyCounters = keyCounters.entrySet().iterator();
+		while(itKeyCounters.hasNext()){
+			Entry<String, Map<String, Long>> keyCountersEntry = (Entry<String, Map<String, Long>>) itKeyCounters.next();
+			String keyStr = keyCountersEntry.getKey();
+			Map<String, Long> coutersPerKeyByRequest = keyCountersEntry.getValue();
 			
-			//fetch metadata from the main counter map
-			Map<String, Map<String, Long>> secondLevelMap = this.countersLocalCopy.get(tableName);
-			if(secondLevelMap == null){
-				secondLevelMap = new Object2ObjectOpenHashMap<String, Map<String, Long>>();
-				this.countersLocalCopy.put(tableName, secondLevelMap);
+			//get meta data
+			Map<String, Long> countersPerKeyMeta = this.getCountersLocalCopy().get(keyStr);
+			if(countersPerKeyMeta == null){
+				//not exists, please create one
+				countersPerKeyMeta = new Object2ObjectOpenHashMap<String, Long>(VascoServiceAgentFactory.SMALL_MAP_INITIAL_SIZE);
+				this.countersLocalCopy.put(keyStr, countersPerKeyMeta);
 			}
 			
-			Iterator itThirdLevel = entrySecondLevel.getValue().entrySet().iterator();
-			while(itThirdLevel.hasNext()){
-				Entry<String, Map<String, Long>> entryThirdLevel = (Entry<String, Map<String, Long>>) itThirdLevel.next();
-				String keyName = entryThirdLevel.getKey();
+			Iterator itCountersPerKey = coutersPerKeyByRequest.entrySet().iterator();
+			while(itCountersPerKey.hasNext()){
+				Entry<String, Long> countersPerKeyEntry = (Entry<String, Long>) itCountersPerKey.next();
+				String opName = countersPerKeyEntry.getKey();
+				long counterValueByRequest = countersPerKeyEntry.getValue().longValue();
 				
-				//get key counter set
-				Map<String, Long> counterSetForKey = secondLevelMap.get(keyName);
-				if(counterSetForKey == null){
-					counterSetForKey = new Object2ObjectOpenHashMap<String, Long>();
-					secondLevelMap.put(keyName, counterSetForKey);
+				//get meta data
+				//get meta data
+				Long counterMeta = countersPerKeyMeta.get(opName);
+				if(counterMeta == null){
+					counterMeta = new Long(0L);
+					countersPerKeyMeta.put(opName, counterMeta);
 				}
 				
-				Iterator itFourthLevel = entryThirdLevel.getValue().entrySet().iterator();
-				while(itFourthLevel.hasNext()){
-					Entry<String, Long> entryFourthLevel = (Entry<String, Long>) itFourthLevel.next();
-					String opName = entryFourthLevel.getKey();
-					
-					Long counterValue = counterSetForKey.get(opName);
-					if(counterValue == null){
-						counterValue = new Long(0L);
-						counterSetForKey.put(opName, counterValue);
-					}
-					
-					if(counterValue.longValue() >= entryFourthLevel.getValue().longValue()){
-						itFourthLevel.remove();
-					}
-				}
-				if(entryThirdLevel.getValue().isEmpty()){
-					itThirdLevel.remove();
+				if(counterMeta.longValue() >= counterValueByRequest){
+					itCountersPerKey.remove();
 				}
 			}
 			
-			if(entrySecondLevel.getValue().isEmpty()){
-				itSecondLevel.remove();
+			if(coutersPerKeyByRequest.isEmpty()){
+				itKeyCounters.remove();
 			}
-			
 		}
 		if(keyCounters.isEmpty()){
 			return true;
@@ -219,6 +198,15 @@ public class SymProtocol extends Protocol{
 				}
 			}
 		}
+	}
+
+	public Map<String, Map<String, Long>> getCountersLocalCopy() {
+		return countersLocalCopy;
+	}
+
+	public void setCountersLocalCopy(
+			Map<String, Map<String, Long>> countersLocalCopy) {
+		this.countersLocalCopy = countersLocalCopy;
 	}
 
 }

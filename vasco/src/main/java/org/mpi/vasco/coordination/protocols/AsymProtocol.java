@@ -147,7 +147,7 @@ public class AsymProtocol extends Protocol{
 		LockReply lcReply = null;
 		synchronized(this.counterMap){
 			
-			Map<String, Map<String, Map<String, Long>>> nonBarrierOpCounterMap = 
+			Map<String, Map<String, Long>> nonBarrierOpCounterMap = 
 					this.counterMap.getMapOfNonBarrierOpCountersAndPlaceBarrier(
 					lcR.getKeyList(),
 					c.getConfList(), txnId,

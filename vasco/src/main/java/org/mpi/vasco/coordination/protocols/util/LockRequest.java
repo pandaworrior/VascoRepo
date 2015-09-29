@@ -16,6 +16,8 @@
  *******************************************************************************/
 package org.mpi.vasco.coordination.protocols.util;
 
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -42,8 +44,9 @@ public class LockRequest{
 	String opName;
 	
 	/** The key list. */
-	/** key -> database table name; value -> a list of keys for that table, compound keys will be concatenated*/
-	HashMap<String, Set<String>> keyList;
+	
+	/** key -> componed key <tablename + key>*/
+	Set<String> keyList;
 	
 	byte[] arr;
 	
@@ -53,7 +56,7 @@ public class LockRequest{
 	 * @param _opName the _op name
 	 * @param _keyList the _key list
 	 */
-	public LockRequest(String _opName, HashMap<String, Set<String>> _keyList){
+	public LockRequest(String _opName, Set<String> _keyList){
 		this.setOpName(_opName);
 		this.setKeyList(_keyList);
 		this.setArr(null);
@@ -66,7 +69,7 @@ public class LockRequest{
 	 */
 	public LockRequest(String _opName){
 		this.setOpName(_opName);
-		this.keyList = new HashMap<String, Set<String>>();
+		this.keyList = new ObjectOpenHashSet<String>();
 		this.setArr(null);
 	}
 
@@ -124,7 +127,7 @@ public class LockRequest{
 	 *
 	 * @return the key list
 	 */
-	public HashMap<String, Set<String>> getKeyList() {
+	public Set<String> getKeyList() {
 		return keyList;
 	}
 
@@ -133,7 +136,7 @@ public class LockRequest{
 	 *
 	 * @param keyList the new key list
 	 */
-	public void setKeyList(HashMap<String, Set<String>> keyList) {
+	public void setKeyList(Set<String> keyList) {
 		this.keyList = keyList;
 	}
 	
@@ -142,31 +145,20 @@ public class LockRequest{
 	 *
 	 * @param _key the _key
 	 */
-	public void addKey(String _key, String _value){
-		Set<String> keyValues = this.getKeyList().get(_key);
-		if(keyValues == null){
-			keyValues = new HashSet<String>();
-			this.getKeyList().put(_key, keyValues);
+	public void addKey(String _key){
+		if(this.keyList == null){
+			this.keyList = new ObjectOpenHashSet<String>();
 		}
-		keyValues.add(_value);
+		this.keyList.add(_key);
 	}
 
 	@Override
     public String toString(){
 		StringBuilder strBuild = new StringBuilder();
 		strBuild.append("< (OpName, " + this.getOpName()+"), (keys, {");
-		Iterator it = this.getKeyList().entrySet().iterator();
-		while(it.hasNext()){
-			Map.Entry<String, Set<String>> e = (Entry<String, Set<String>>) it.next();
-			strBuild.append("<keyGroup: ");
-			strBuild.append(e.getKey());
-			strBuild.append(", keys: {");
-			for(String s : e.getValue()){
-				strBuild.append(s);
-				strBuild.append(',');
-			}
-			strBuild.deleteCharAt(strBuild.length() - 1);
-			strBuild.append("}>,");
+		for(String keyStr : this.getKeyList()){
+			strBuild.append(keyStr);
+			strBuild.append(',');
 		}
 		strBuild.deleteCharAt(strBuild.length() - 1);
 		strBuild.append("})>");
@@ -177,17 +169,12 @@ public class LockRequest{
 		ByteArrayInputStream bais = new ByteArrayInputStream(this.getArr());
 		DataInputStream dis = new DataInputStream(bais);
 		this.setOpName(dis.readUTF());
-		int numOfKeyGroups = dis.readInt();
-		this.setKeyList(new HashMap<String, Set<String>>());
-		while(numOfKeyGroups > 0){
-			String keyGroupStr = dis.readUTF();
-			int numOfKeys = dis.readInt();
-			while(numOfKeys > 0){
-				String keyStr = dis.readUTF();
-				this.addKey(keyGroupStr, keyStr);
-				numOfKeys--;
-			}
-			numOfKeyGroups--;
+		int numOfKey = dis.readInt();
+		this.setKeyList(new ObjectOpenHashSet<String>());
+		while(numOfKey > 0){
+			String keyStr = dis.readUTF();
+			this.addKey(keyStr);
+			numOfKey--;
 		}
 	}
 	
@@ -213,14 +200,8 @@ public class LockRequest{
 			DataOutputStream dos = new DataOutputStream(baos);
 			dos.writeUTF(this.getOpName());
 			dos.writeInt(this.getKeyList().size());
-			Iterator it = this.getKeyList().entrySet().iterator();
-			while(it.hasNext()){
-				Map.Entry<String, Set<String>> e = (Map.Entry<String, Set<String>>) it.next();
-				dos.writeUTF(e.getKey());
-				dos.writeInt(e.getValue().size());
-				for(String s : e.getValue()){
-					dos.writeUTF(s);
-				}
+			for(String keyStr : this.getKeyList()){
+				dos.writeUTF(keyStr);
 			}
 			this.setArr(baos.toByteArray());
 		}
@@ -230,7 +211,6 @@ public class LockRequest{
 		try {
 			this.encode();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.exit(-1);
 		}

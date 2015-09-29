@@ -23,13 +23,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
+import org.mpi.vasco.coordination.VascoServiceAgentFactory;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
 /**
@@ -43,12 +41,11 @@ public class LockReply {
 	int protocolType;
 	
 	/** The key counter map. 
-	 * first level key -> table name
-	 * second level key -> primary keys in that table
-	 * third level key -> counter name (operation name requires stronger consistency semantics)
+	 * first level key -> table name + primary key
+	 * second level key -> counter name (operation name requires stronger consistency semantics)
 	 * value -> counter value
 	 * */
-	Map<String, Map<String, Map<String, Long>>> keyCounterMap;
+	Map<String, Map<String, Long>> keyCounterMap;
 	
 	/*This field is used by the non-barrier op in asym protocol, do not need to encode */
 	Set<ProxyTxnId> barrierInstancesForWait;
@@ -62,7 +59,7 @@ public class LockReply {
 	 * @param _opName the _op name
 	 * @param _keyCounterMap the _key counter map
 	 */
-	public LockReply(String _opName, int pType, Map<String, Map<String, Map<String, Long>>> _keyCounterMap){
+	public LockReply(String _opName, int pType, Map<String, Map<String, Long>> _keyCounterMap){
 		this.setOpName(_opName);
 		this.setProtocolType(pType);
 		this.setKeyCounterMap(_keyCounterMap);
@@ -77,7 +74,7 @@ public class LockReply {
 	public LockReply(String _opName, int pType){
 		this.setOpName(_opName);
 		this.setProtocolType(pType);
-		this.setKeyCounterMap(new Object2ObjectOpenHashMap<String, Map<String, Map<String, Long>>>());
+		this.setKeyCounterMap(new Object2ObjectOpenHashMap<String, Map<String, Long>>(VascoServiceAgentFactory.SMALL_MAP_INITIAL_SIZE));
 		this.setArr(null);
 	}
 	
@@ -129,7 +126,7 @@ public class LockReply {
 	 *
 	 * @return the key counter map
 	 */
-	public Map<String, Map<String, Map<String, Long>>> getKeyCounterMap() {
+	public Map<String, Map<String, Long>> getKeyCounterMap() {
 		return keyCounterMap;
 	}
 
@@ -138,7 +135,7 @@ public class LockReply {
 	 *
 	 * @param keyCounterMap the key counter map
 	 */
-	public void setKeyCounterMap(Map<String, Map<String, Map<String, Long>>> keyCounterMap) {
+	public void setKeyCounterMap(Map<String, Map<String, Long>> keyCounterMap) {
 		this.keyCounterMap = keyCounterMap;
 	}
 	
@@ -148,23 +145,16 @@ public class LockReply {
 	 * @param key the key
 	 * @param counter the counter
 	 */
-	public void addKeyCounterPair(String keyGroup, String key, String conflictStr, long counter){
-		//get table
-		Map<String, Map<String, Long>> keyCounterMap = this.getKeyCounterMap().get(keyGroup);
-		if(keyCounterMap == null){
-			keyCounterMap = new Object2ObjectOpenHashMap<String, Map<String, Long>>();
-			this.getKeyCounterMap().put(keyGroup, keyCounterMap);
+	public void addKeyCounterPair(String keyStr, String conflictStr, long counter){
+		//get counter per key
+		Map<String, Long> counterMapPerKey = this.getKeyCounterMap().get(keyStr);
+		if(counterMapPerKey == null){
+			counterMapPerKey = new Object2ObjectOpenHashMap<String, Long>(VascoServiceAgentFactory.SMALL_MAP_INITIAL_SIZE);
+			this.getKeyCounterMap().put(keyStr, counterMapPerKey);
 		}
 		
-		//get key name
-		Map<String, Long> counterSet = keyCounterMap.get(key);
-		if(counterSet == null){
-			counterSet = new HashMap<String, Long>();
-			keyCounterMap.put(key, counterSet);
-		}
-		
-		if(!counterSet.containsKey(conflictStr)){
-			counterSet.put(conflictStr, counter);
+		if(!counterMapPerKey.containsKey(conflictStr)){
+			counterMapPerKey.put(conflictStr, counter);
 		}else{
 			throw new RuntimeException("Found duplicates\n");
 		}
@@ -180,21 +170,18 @@ public class LockReply {
 		DataInputStream dis = new DataInputStream(bais);
 		this.setOpName(dis.readUTF());
 		this.setProtocolType(dis.readInt());
-		int numOfKeyGroups = dis.readInt();
-		this.setKeyCounterMap(new Object2ObjectOpenHashMap<String, Map<String, Map<String, Long>>>());
-		while(numOfKeyGroups > 0){
-			String keyGroupStr = dis.readUTF();
-			int numOfKeys = dis.readInt();
-			while(numOfKeys > 0){
-				String key = dis.readUTF();
-				int numOfConflicts = dis.readInt();
-				while(numOfConflicts > 0){
-					this.addKeyCounterPair(keyGroupStr, key, dis.readUTF(), dis.readLong());
-					numOfConflicts--;
-				}
-				numOfKeys--;
+		int numOfKeys = dis.readInt();
+		this.setKeyCounterMap(new Object2ObjectOpenHashMap<String, Map<String, Long>>());
+		while(numOfKeys > 0){
+			String keyStr = dis.readUTF();
+			int numOfConflicts = dis.readInt();
+			while(numOfConflicts > 0){
+				String conflictOpStr = dis.readUTF();
+				long counterValue = dis.readLong();
+				this.addKeyCounterPair(keyStr, conflictOpStr, counterValue);
+				numOfConflicts--;
 			}
-			numOfKeyGroups--;
+			numOfKeys--;
 		}
 	}
 	
@@ -210,21 +197,14 @@ public class LockReply {
 			dos.writeUTF(this.getOpName());
 			dos.writeInt(this.getProtocolType());
 			dos.writeInt(this.getKeyCounterMap().size());
-			Iterator it = this.getKeyCounterMap().entrySet().iterator();
-			while(it.hasNext()){
-				Map.Entry<String, HashMap<String, HashMap<String, Long>>> e = (Entry<String, HashMap<String, HashMap<String, Long>>>) it.next();
-				dos.writeUTF(e.getKey());
-				dos.writeInt(e.getValue().size());
-				Set<String> keySet = e.getValue().keySet();
-				for(String key : keySet){
-					dos.writeUTF(key);
-					HashMap<String, Long> counterSet = e.getValue().get(key);
-					dos.writeInt(counterSet.size());
-					for(Map.Entry<String, Long> counter : counterSet.entrySet()){
-						dos.writeUTF(counter.getKey());
-						dos.writeLong(counter.getValue().longValue());
-					}
-					
+			
+			for(String keyStr : this.getKeyCounterMap().keySet()){
+				dos.writeUTF(keyStr);
+				Map<String, Long> countersPerKey = this.getKeyCounterMap().get(keyStr);
+				dos.writeInt(countersPerKey.size());
+				for(String opName : countersPerKey.keySet()){
+					dos.writeUTF(opName);
+					dos.writeLong(countersPerKey.get(opName).longValue());
 				}
 			}
 			this.setArr(baos.toByteArray());
@@ -274,49 +254,31 @@ public class LockReply {
 		this.arr = arr;
 	}
 	
-	private long getCounterByName(String tableName, String primaryKeyName, String operationName){
-		Map<String, Map<String, Long>> secondLevelMap = this.getKeyCounterMap().get(tableName);
-		if(secondLevelMap != null){
-			Map<String, Long> thirdLevelMap = secondLevelMap.get(primaryKeyName);
-			if(thirdLevelMap != null){
-				if(thirdLevelMap.containsKey(operationName)){
-					return thirdLevelMap.get(operationName).longValue();
-				}
-			}
+	private long getCounterByName(String compoundKey, String operationName){
+		Map<String, Long> countersPerKey = this.getKeyCounterMap().get(compoundKey);
+		Long counterObj = countersPerKey.get(operationName);
+		if(counterObj == null){
+			throw new RuntimeException("no such counter exists for key " + compoundKey);
+		}else{
+			return counterObj.longValue();
 		}
-		return -1;
 	}
 	
 	public void aggreLockReplies(List<LockReply> lcReplies){
 		if(lcReplies == null || lcReplies.isEmpty()){
 			return;
 		}else{
-			Iterator it = this.getKeyCounterMap().entrySet().iterator();
-			while(it.hasNext()){
-				Map.Entry<String, HashMap<String, HashMap<String, Long>>> e = (Entry<String, HashMap<String, HashMap<String, Long>>>) it.next();
-				//table name
-				String tableName = e.getKey();
-				Set<String> keySet = e.getValue().keySet();
-				for(String key : keySet){
-					//enumerate all primary keys
-					//check all counters
-					HashMap<String, Long> counterSet = e.getValue().get(key);
-					for(Map.Entry<String, Long> counter : counterSet.entrySet()){
-						//conflict operation name
-						String operationName = counter.getKey();
-						long counterValue = counter.getValue().longValue();
-						//aggregate here:
-						
-						for(LockReply lcReplyEntry : lcReplies){
-							long cValue = lcReplyEntry.getCounterByName(tableName, key, operationName);
-							if(cValue == -1){
-								throw new RuntimeException("one lc reply doesn't observe the following counter " + tableName + ", " + key + ", " + operationName);
-							}else{
-								counterValue += cValue;
-							}
-						}
-						counterSet.put(operationName, new Long(counterValue));
+			
+			for(String keyStr : this.getKeyCounterMap().keySet()){
+				Map<String, Long> countersPerKey = this.getKeyCounterMap().get(keyStr);
+				for(String opName : countersPerKey.keySet()){
+					long counterValue = countersPerKey.get(opName).longValue();
+					
+					for(LockReply lcReplyEntry : lcReplies){
+						long cValue = lcReplyEntry.getCounterByName(keyStr, opName);
+						counterValue += cValue;
 					}
+					countersPerKey.put(opName, new Long(counterValue));
 				}
 			}
 		}
@@ -332,26 +294,19 @@ public class LockReply {
 		strBuild.append("(protocolType, ");
 		strBuild.append(this.protocolType);
 		strBuild.append("),");
-		strBuild.append("), (keys, {");
-		Iterator it = this.getKeyCounterMap().entrySet().iterator();
-		while(it.hasNext()){
-			Map.Entry<String, HashMap<String, HashMap<String, Long>>> e = (Entry<String, HashMap<String, HashMap<String, Long>>>) it.next();
-			strBuild.append("<keyGroups: ");
-			strBuild.append(e.getKey());
-			strBuild.append(", {");
-			Set<String> keySet = e.getValue().keySet();
-			for(String key : keySet){
-				strBuild.append("key: ");
-				strBuild.append(key);
-				strBuild.append(", counters:  ");
-				HashMap<String, Long> counterSet = e.getValue().get(key);
-				for(Map.Entry<String, Long> counter : counterSet.entrySet()){
-					strBuild.append('(');
-					strBuild.append(counter.getKey());
-					strBuild.append(',');
-					strBuild.append(counter.getValue().longValue());
-					strBuild.append("),");
-				}
+		strBuild.append("), (keys-value pairs: {");
+		
+		for(String keyStr : this.getKeyCounterMap().keySet()){
+			strBuild.append("key: ");
+			strBuild.append(keyStr);
+			strBuild.append(", counters:  ");
+			Map<String, Long> countersPerKey = this.getKeyCounterMap().get(keyStr);
+			for(String opName : countersPerKey.keySet()){
+				strBuild.append('(');
+				strBuild.append(opName);
+				strBuild.append(',');
+				strBuild.append(countersPerKey.get(opName).longValue());
+				strBuild.append("),");
 			}
 			strBuild.deleteCharAt(strBuild.length() - 1);
 			strBuild.append("}, ");

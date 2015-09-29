@@ -27,6 +27,14 @@ public class VascoServiceAgentFactory {
 	 * */
 	public static int RESPONSE_WAITING_TIME_IN_MILL_SECONDS = 1;
 	
+	public static int BIG_MAP_INITIAL_SIZE = 10000;
+	
+	public static int BIG_SET_INITIAL_SIZE = 10000;
+	
+	public static int SMALL_MAP_INITIAL_SIZE = 10;
+	
+	public static int SMALL_SET_INITIAL_SIZE = 10;
+	
 	/**
 	 * Creates a new VascoServiceAgent object.
 	 *
