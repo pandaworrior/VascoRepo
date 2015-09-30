@@ -76,21 +76,16 @@ public class MessageHandlerServerSide extends BaseNode{
 		}
 	}
 	
-	/*public LockRepMessage generateRandomReplyMessage(LockReqMessage msg){
+	public LockRepMessage generateRandomReplyMessage(LockReqMessage msg){
 		Debug.println("Generate a random reply message");
 		LockReply rp = new LockReply(msg.getLockReq().getOpName(), Protocol.PROTOCOL_SYM);
-		Iterator it = msg.getLockReq().getKeyList().entrySet().iterator();
-		while(it.hasNext()){
-			Map.Entry<String, Set<String>> e = (Entry<String, Set<String>>) it.next();
-			String keyGroup = e.getKey();
-			for(String key : e.getValue()){
-				int counter = RandomUtils.nextInt(0, 100);
-				rp.addKeyCounterPair(keyGroup, key, counter);
-			}
+		for(String keyStr : msg.getLockReq().getKeyList()){
+			int counter = RandomUtils.nextInt(0, 100);
+			rp.addKeyCounterPair(keyStr, "hello", counter);
 		}
 		LockRepMessage pMsg = new LockRepMessage(msg.getProxyTxnId(), rp);
 		return pMsg;
-	}*/
+	}
 	
 	/**
 	 * Process for test
@@ -120,11 +115,12 @@ public class MessageHandlerServerSide extends BaseNode{
 	 */
 	private void process(LockReqMessage msg){
 		Debug.printf("Receive from client %d a lock request message %s\n", msg.getGlobalProxyId(), msg.toString());
+		LockRepMessage repMsg = null;
 		if(this.getRsmLockService() == null){
-			throw new RuntimeException("RSM is not set");
+			//throw new RuntimeException("RSM is not set");
+			repMsg = this.generateRandomReplyMessage(msg);
 		}else{
 			//LockRepMessage repMsg = this.getRsmLockService().put(msg.getProxyTxnId().toString(), msg.getLockReq());
-			LockRepMessage repMsg = null;
 			LockReply reply = null;
 			try {
 				reply = this.getRsmLockService().getAndAdd(msg.getLockReq());
@@ -132,12 +128,12 @@ public class MessageHandlerServerSide extends BaseNode{
 				e.printStackTrace();
 			}
 			repMsg = new LockRepMessage(msg.getProxyTxnId(), reply);
-			int clientId = msg.getGlobalProxyId();
-			this.sendToLockClient(repMsg, clientId);
-			Debug.printf("Send to lock client with id %d lock reply message %s", clientId, repMsg.toString());
-			mf.returnLockReqMessage(msg);
-			mf.returnLockRepMessage(repMsg);
 		}
+		int clientId = msg.getGlobalProxyId();
+		this.sendToLockClient(repMsg, clientId);
+		Debug.printf("Send to lock client with id %d lock reply message %s", clientId, repMsg.toString());
+		mf.returnLockReqMessage(msg);
+		mf.returnLockRepMessage(repMsg);
 	}
 
 	/* (non-Javadoc)

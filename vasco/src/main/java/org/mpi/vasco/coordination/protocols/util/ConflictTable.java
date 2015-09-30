@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
@@ -239,6 +240,30 @@ public class ConflictTable {
 		}
 
 		return c;
+	}
+	
+	public Map<String, Conflict> getConflictsByType(int conflictType){
+		return this.getConflicts().get(conflictType);
+	}
+	
+	
+	public String getRandomConflictOpNameByType(int conflictType){
+		Map<String, Conflict> conflictsMap = this.getConflictsByType(conflictType);
+		int sizeOfMap = conflictsMap.size();
+		
+		if(sizeOfMap != 0){
+			Random random = new Random();
+			int pos = random.nextInt(sizeOfMap);
+			
+			for(String conflictName : conflictsMap.keySet()){
+				if(pos == 0){
+					return conflictName;
+				}
+				pos--;
+			}
+		}
+		
+		throw new RuntimeException("No such conflicts for protocol " + conflictType);
 	}
 	
 	/**

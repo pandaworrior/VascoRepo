@@ -40,8 +40,8 @@ public class VascoServiceAgentFactory {
 	 *
 	 * @return the vasco service agent
 	 */
-	public VascoServiceAgent createVascoServiceAgent(){
-		return null;
+	public static VascoServiceAgent createVascoServiceAgent(String memFile, int clientId){
+		return new VascoServiceAgent(memFile, clientId);
 	}
 
 	public static int getRESPONSE_WAITING_TIME_IN_MILL_SECONDS() {
@@ -51,5 +51,17 @@ public class VascoServiceAgentFactory {
 	public static void setRESPONSE_WAITING_TIME_IN_MILL_SECONDS(
 			int rESPONSE_WAITING_TIME_IN_MILL_SECONDS) {
 		RESPONSE_WAITING_TIME_IN_MILL_SECONDS = rESPONSE_WAITING_TIME_IN_MILL_SECONDS;
+	}
+	
+	public static void main(String[] args){
+		if(args.length != 2){
+			System.out.println("MessageHandlerServerSide [memshipFile] [id]");
+			System.exit(-1);
+		}
+		
+		String membershipFile = args[0];
+		int myId = Integer.parseInt(args[1]);
+		VascoServiceAgent vA = createVascoServiceAgent(membershipFile, myId);
+		vA.getClient().test();
 	}
 }

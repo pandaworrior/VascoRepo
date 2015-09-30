@@ -155,6 +155,55 @@ public class MessageHandlerClientSide extends BaseNode{
 		this.sendToLockServer(msg);
 	}
 	
+	private LockReqMessage generateTestSymRequestMessage(){
+		//get the conflict table
+		String opName = this.getAgent().getConfTable().getRandomConflictOpNameByType(Protocol.PROTOCOL_SYM);
+		ProxyTxnId txnId = new ProxyTxnId(0, 0, counterPerClient++);
+		LockRequest lr = new LockRequest(opName);
+		Random random = new Random();
+		int numOfKeys = random.nextInt(5);
+		Debug.printf("Generate %d keys\n", numOfKeys);
+		for(int i = 0; i < numOfKeys; i++){
+			String keyStr = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+			if(keyStr.equalsIgnoreCase("")){
+				throw new RuntimeException("You generated an empty string\n");
+			}
+			lr.addKey(keyStr);
+		}
+		LockReqMessage msg = new LockReqMessage(txnId, myId, lr);
+		Debug.println("Randomly generate a request message\n");
+		Debug.println(msg.toString());
+		return msg;
+	}
+	
+	public void sendTestSymRequestMessage(){
+		Debug.println("Send a test sym request message to server");
+		String opName = this.getAgent().getConfTable().getRandomConflictOpNameByType(Protocol.PROTOCOL_SYM);
+		ProxyTxnId txnId = new ProxyTxnId(this.getMyId(), 0, counterPerClient++);
+		LockRequest lr = new LockRequest(opName);
+		Random random = new Random();
+		int numOfKeys = 5;//random.nextInt(5);
+		Debug.printf("Generate %d keys\n", numOfKeys);
+		for(int i = 0; i < numOfKeys; i++){
+			String keyStr = "a_" + i;//RandomStringUtils.randomAlphabetic(5).toLowerCase();
+			if(keyStr.equalsIgnoreCase("")){
+				throw new RuntimeException("You generated an empty string\n");
+			}
+			lr.addKey(keyStr);
+		}
+		this.agent.getProtocol(Protocol.PROTOCOL_SYM).getPermission(txnId, lr);
+	}
+	
+	public void sendTestSymRequestMessageInBatch(int batchSize){
+		if(batchSize <= 0){
+			throw new RuntimeException("batch size must be positive");
+		}
+		while(batchSize > 0){
+			this.sendTestSymRequestMessage();
+			batchSize--;
+		}
+	}
+	
 	public void test(){
 		Debug.println("Test the client and server");
 		Scanner keyboard = new Scanner(System.in);
@@ -168,6 +217,15 @@ public class MessageHandlerClientSide extends BaseNode{
 			case 2:
 				keyboard.close();
 				return;
+			case 3:
+				//test the full functionality of the lock service
+				//send symtry message
+				this.sendTestSymRequestMessage();
+				break;
+			case 4:
+				int batchSize = keyboard.nextInt();
+				this.sendTestSymRequestMessageInBatch(batchSize);
+				break;
 			default:
 				keyboard.close();
 				throw new RuntimeException("Not specified yet");

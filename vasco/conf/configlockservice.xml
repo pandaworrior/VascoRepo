@@ -11,8 +11,9 @@
     	<lockServer lsId="0" lsIP="127.0.0.1" lsPort="10002" dbPort="10003"/>
     	<lockServer lsId="0" lsIP="127.0.0.1" lsPort="10004" dbPort="10005"/>
     </lockServerCluster>
-    <lockClientGroup lcNum="1">
+    <lockClientGroup lcNum="2">
     	<lockClient lcId="0" lcIP="127.0.0.1" lcPort="10016"/>
+        <lockClient lcId="1" lcIP="127.0.0.1" lcPort="10017"/>
     </lockClientGroup>
     
     <collectionOfConflicts numOfConflicts="3">

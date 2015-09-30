@@ -289,17 +289,17 @@ public class LockReply {
 	 */
 	public String toString(){
 		StringBuilder strBuild = new StringBuilder();
-		strBuild.append("<(OpName, ");
+		strBuild.append("<(OpName: ");
 		strBuild.append(this.getOpName());
-		strBuild.append("(protocolType, ");
+		strBuild.append("), (protocolType, ");
 		strBuild.append(this.protocolType);
 		strBuild.append("),");
-		strBuild.append("), (keys-value pairs: {");
+		strBuild.append("(keys-value pairs: {");
 		
 		for(String keyStr : this.getKeyCounterMap().keySet()){
-			strBuild.append("key: ");
+			strBuild.append("(key: ");
 			strBuild.append(keyStr);
-			strBuild.append(", counters:  ");
+			strBuild.append(", counters: {");
 			Map<String, Long> countersPerKey = this.getKeyCounterMap().get(keyStr);
 			for(String opName : countersPerKey.keySet()){
 				strBuild.append('(');
@@ -309,7 +309,7 @@ public class LockReply {
 				strBuild.append("),");
 			}
 			strBuild.deleteCharAt(strBuild.length() - 1);
-			strBuild.append("}, ");
+			strBuild.append("}), ");
 		}
 		strBuild.deleteCharAt(strBuild.length() - 1);
 		strBuild.append("})>");
