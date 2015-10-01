@@ -17,10 +17,8 @@
 package org.mpi.vasco.coordination.protocols;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap.Entry;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -33,9 +31,8 @@ import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.coordination.protocols.util.SymMetaData;
-import org.mpi.vasco.coordination.protocols.util.asym.AsymCounter;
-import org.mpi.vasco.coordination.protocols.util.asym.AsymNonBarrierCounter;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
+import org.mpi.vasco.util.debug.Debug;
 
 /**
  * The Class SymProtocol.
@@ -58,7 +55,7 @@ public class SymProtocol extends Protocol{
 	 */
 	public SymProtocol(MessageHandlerClientSide c) {
 		super(c);
-		this.symMetaDataMap = new ConcurrentHashMap<ProxyTxnId, SymMetaData>();
+		this.symMetaDataMap = new ConcurrentHashMap<ProxyTxnId, SymMetaData>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE);
 		this.setCountersLocalCopy(new Object2ObjectOpenHashMap<String, Map<String, Long>>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE));
 	}
 
@@ -69,10 +66,8 @@ public class SymProtocol extends Protocol{
 	public LockReply getPermission(ProxyTxnId txnId, LockRequest lcR) {
 		LockReqMessage msg = new LockReqMessage(txnId,
 				client.getMyId(), lcR);
-		
-		client.sendToLockServer(msg);
-		
 		SymMetaData meta = this.addInitialMetaData(txnId, lcR);
+		client.sendToLockServer(msg);
 		synchronized(meta){
 			while(meta.getLockReply() == null){
 				try {
@@ -100,6 +95,7 @@ public class SymProtocol extends Protocol{
 	}
 	
 	public SymMetaData addInitialMetaData(ProxyTxnId txnId, LockRequest lcR){
+		Debug.println("Initially added " + txnId.toString());
 		SymMetaData meta = new SymMetaData(lcR, null);
 		this.symMetaDataMap.put(txnId, meta);
 		return meta;

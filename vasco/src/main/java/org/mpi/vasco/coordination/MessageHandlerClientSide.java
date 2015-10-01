@@ -23,6 +23,7 @@ import org.mpi.vasco.network.netty.NettyTCPReceiver;
 import org.mpi.vasco.network.netty.NettyTCPSender;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.util.debug.Debug;
+import org.mpi.vasco.util.debug.PerProfile;
 
 public class MessageHandlerClientSide extends BaseNode{
 
@@ -177,6 +178,7 @@ public class MessageHandlerClientSide extends BaseNode{
 	}
 	
 	public void sendTestSymRequestMessage(){
+		PerProfile.startMeasure();
 		Debug.println("Send a test sym request message to server");
 		String opName = this.getAgent().getConfTable().getRandomConflictOpNameByType(Protocol.PROTOCOL_SYM);
 		ProxyTxnId txnId = new ProxyTxnId(this.getMyId(), 0, counterPerClient++);
@@ -192,6 +194,7 @@ public class MessageHandlerClientSide extends BaseNode{
 			lr.addKey(keyStr);
 		}
 		this.agent.getProtocol(Protocol.PROTOCOL_SYM).getPermission(txnId, lr);
+		PerProfile.endMeasure();
 	}
 	
 	public void sendTestSymRequestMessageInBatch(int batchSize){
@@ -205,10 +208,10 @@ public class MessageHandlerClientSide extends BaseNode{
 	}
 	
 	public void test(){
-		Debug.println("Test the client and server");
+		System.out.println("Test the client and server");
 		Scanner keyboard = new Scanner(System.in);
 		while(true){
-			Debug.println("[1] send a request msg and [2] quit"+ "\n");
+			System.out.println("[1] send a request msg and [2] quit"+ "\n");
 			int input=keyboard.nextInt();
 			switch(input){
 			case 1:
