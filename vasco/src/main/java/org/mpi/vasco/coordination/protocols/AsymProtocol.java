@@ -107,9 +107,7 @@ public class AsymProtocol extends Protocol{
 					lcRequest.getKeyList(), c.getConfList(), opName);
 			}
 			
-			if(barrierInstances != null && barrierInstances.isEmpty()){
-				lcReply = new LockReply(opName, Protocol.PROTOCOL_ASYM, barrierInstances);
-			}
+			lcReply = new LockReply(opName, Protocol.PROTOCOL_ASYM, barrierInstances);
 			
 			//no barriers to be waiting, then return null
 		}

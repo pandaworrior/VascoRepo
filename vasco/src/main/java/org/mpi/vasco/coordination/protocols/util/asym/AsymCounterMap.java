@@ -115,8 +115,8 @@ public class AsymCounterMap {
 			}
 			((AsymNonBarrierCounter) nbCounter).addLocalInstance();
 		}
-		Debug.println("getListOfBarrierInstancesAndUpdateLocalCounter\n");
-		this.printOutCounterMap();
+		//Debug.println("getListOfBarrierInstancesAndUpdateLocalCounter\n");
+		//this.printOutCounterMap();
 		return barrierInstances;
 	}
 	
@@ -140,7 +140,7 @@ public class AsymCounterMap {
 				if(nbCounter != null){
 					((AsymNonBarrierCounter) nbCounter).completeLocalInstance();
 				}else{
-					this.printOutCounterMap();
+					//this.printOutCounterMap();
 					throw new RuntimeException(nonBarrierOpName + " counter for the key " +keyStr+ " not exists!");
 				}
 			}else{
@@ -157,8 +157,8 @@ public class AsymCounterMap {
 	 */
 	public void completeLocalNonBarrierOpCleanUp(Set<String> keys, String nonBarrierOpName){
 		this.updateGlobalCountForNonBarrierOpByOne(keys, nonBarrierOpName);
-		Debug.println("completeLocalNonBarrierOpCleanUp\n");
-		this.printOutCounterMap();
+		//Debug.println("completeLocalNonBarrierOpCleanUp\n");
+		//this.printOutCounterMap();
 	}
 	
 	/**
@@ -169,8 +169,8 @@ public class AsymCounterMap {
 	 */
 	public void completeRemoteNonBarrierOpCleanUp(Set<String> keys, String nonBarrierOpName){
 		this.updateGlobalCountForNonBarrierOpByOne(keys, nonBarrierOpName);
-		Debug.println("completeRemoteNonBarrierOpCleanUp\n");
-		this.printOutCounterMap();
+		//Debug.println("completeRemoteNonBarrierOpCleanUp\n");
+		//this.printOutCounterMap();
 	}
 
 	/**
@@ -226,8 +226,8 @@ public class AsymCounterMap {
 			}
 			((AsymBarrierCounter) bCounter).addBarrierInstance(barrierId);
 		}
-		Debug.println("getMapOfNonBarrierOpCountersAndPlaceBarrier\n");
-		this.printOutCounterMap();
+		//Debug.println("getMapOfNonBarrierOpCountersAndPlaceBarrier\n");
+		//this.printOutCounterMap();
 		return counterAllMap;
 	}
 	
@@ -261,8 +261,8 @@ public class AsymCounterMap {
 				throw new RuntimeException(keyStr + " not exists!");
 			}
 		}
-		Debug.println("completeBarrierOpCleanUp\n");
-		this.printOutCounterMap();
+		//Debug.println("completeBarrierOpCleanUp\n");
+		//this.printOutCounterMap();
 	}
 	
 	/**
@@ -275,8 +275,8 @@ public class AsymCounterMap {
 	public void completeLocalBarrierOpCleanUp(Set<String> keys,
 			String operationName, ProxyTxnId txnId){
 		this.completeBarrierOpCleanUp(keys, operationName, txnId);
-		Debug.println("completeLocalBarrierOpCleanUp\n");
-		this.printOutCounterMap();
+		//Debug.println("completeLocalBarrierOpCleanUp\n");
+		//this.printOutCounterMap();
 	}
 	
 	//check the non barrier operations a barrier operation depends on already applied
