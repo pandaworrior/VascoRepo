@@ -73,9 +73,9 @@ public class CleanUpBarrierMessage extends MessageBase{
     	 */
     	public CleanUpBarrierMessage(byte[] b){
 			super(b);
-			if (getTag() != MessageTags.LOCKREP)
+			if (getTag() != MessageTags.CLEANUPBARRIER)
 			    throw new RuntimeException("Invalid message tag.  looking for "+
-						       MessageTags.LOCKREP+ " found "+getTag());
+						       MessageTags.CLEANUPBARRIER+ " found "+getTag());
 			int offset = getOffset();
 			proxyTxnId = new ProxyTxnId(b, offset);
 			offset += proxyTxnId.getByteSize();
@@ -91,9 +91,9 @@ public class CleanUpBarrierMessage extends MessageBase{
     	 */
     	public void decodeMessage(byte[] b){
 	    	this.decodeMessage(b, 0);
-	    	if (getTag() != MessageTags.LOCKREP)
+	    	if (getTag() != MessageTags.CLEANUPBARRIER)
 	    	    throw new RuntimeException("Invalid message tag.  looking for "+
-	    				       MessageTags.LOCKREP+ " found "+getTag());
+	    				       MessageTags.CLEANUPBARRIER+ " found "+getTag());
 	    	int offset = getOffset();
 	    	proxyTxnId = new ProxyTxnId(b, offset);
 	    	offset += proxyTxnId.getByteSize();

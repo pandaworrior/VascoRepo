@@ -25,6 +25,9 @@ import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.util.debug.Debug;
 import org.mpi.vasco.util.debug.PerProfile;
 
+//:TODO: think about how to recycle the used messages, since some components of
+// messaages like lockreply or lockrequest are continiously used by the other parts of code
+
 public class MessageHandlerClientSide extends BaseNode{
 
 	private static final long serialVersionUID = -4040510651915229397L;
@@ -58,6 +61,7 @@ public class MessageHandlerClientSide extends BaseNode{
 		case MessageTags.CLEANUPBARRIER:
 			//Barrier, clean up a local barrier on the behalf of the remote peer
 			process((CleanUpBarrierMessage)msg);
+			break;
 		default:
 			throw new RuntimeException("invalid message tag: " + msg.getTag());
 		}
@@ -65,7 +69,7 @@ public class MessageHandlerClientSide extends BaseNode{
 	}
 
 	private void process(LockRepMessage msg) {
-		Debug.printf("Receive a lock reply message from server or client content %s", msg.toString());
+		Debug.printf("Receive a lock reply message from server or client content %s \n", msg.toString());
 		LockReply lcReply = msg.getLockRly();
 		int pType = lcReply.getProtocolType();
 		//get either sym or asym protocol
@@ -74,12 +78,12 @@ public class MessageHandlerClientSide extends BaseNode{
 			throw new RuntimeException("No such a protocol " + lcReply.getProtocolType());
 		}
 		p.addLockReply(msg.getProxyTxnId(), lcReply);
-		mf.returnLockRepMessage(msg);
+		//mf.returnLockRepMessage(msg);
 		
 	}
 	
 	private void process(LockReqMessage msg){
-		Debug.printf("Receive a lock request message from client content %s", msg.toString());
+		Debug.printf("Receive a lock request message from client content %s \n", msg.toString());
 		Protocol p = this.getAgent().getProtocol(Protocol.PROTOCOL_ASYM);
 		if(p == null){
 			throw new RuntimeException("No such a protocol " + Protocol.PROTOCOL_ASYM);
@@ -89,18 +93,18 @@ public class MessageHandlerClientSide extends BaseNode{
 		LockRepMessage repMsg = new LockRepMessage(msg.getProxyTxnId(), lcReply);
 		int clientId = msg.getGlobalProxyId();
 		this.sendToLockClient(repMsg, clientId);
-		mf.returnLockReqMessage(msg);
-		mf.returnLockRepMessage(repMsg);
+		//mf.returnLockReqMessage(msg);
+		//mf.returnLockRepMessage(repMsg);
 	}
 	
 	private void process(CleanUpBarrierMessage msg){
-		Debug.printf("Receive a clean up barrier message from client content %s", msg.toString());
+		Debug.printf("Receive a clean up barrier message from client content %s\n", msg.toString());
 		Protocol p = this.getAgent().getProtocol(Protocol.PROTOCOL_ASYM);
 		if(p == null){
 			throw new RuntimeException("No such a protocol " + Protocol.PROTOCOL_ASYM);
 		}
 		
-		p.cleanUp(msg.getProxyTxnId());
+		p.cleanUpLocal(msg.getProxyTxnId());
 	}
 
 	@Override
@@ -130,60 +134,14 @@ public class MessageHandlerClientSide extends BaseNode{
 	}
 	
 	static int counterPerClient = 0;
-	public LockReqMessage generateRandomRequestMessage(){
-		ProxyTxnId txnId = new ProxyTxnId(0, 0, counterPerClient++);
-		LockRequest lr = new LockRequest(RandomStringUtils.randomAlphabetic(5).toLowerCase());
-		Random random = new Random();
-		int numOfKeys = random.nextInt(5);
-		Debug.printf("Generate %d keys\n", numOfKeys);
-		for(int i = 0; i < numOfKeys; i++){
-			String keyStr = RandomStringUtils.randomAlphabetic(5).toLowerCase();
-			if(keyStr.equalsIgnoreCase("")){
-				throw new RuntimeException("You generated an empty string\n");
-			}
-			lr.addKey(keyStr);
-		}
-		LockReqMessage msg = new LockReqMessage(txnId, myId, lr);
-		Debug.println("Randomly generate a request message\n");
-		Debug.println(msg.toString());
-		return msg;
-	}
-	
-	public void sendRandomRequestMessage(){
-		Debug.println("Send a random request message to server");
-		LockReqMessage msg = this.generateRandomRequestMessage();
-		
-		this.sendToLockServer(msg);
-	}
-	
-	private LockReqMessage generateTestSymRequestMessage(){
-		//get the conflict table
-		String opName = this.getAgent().getConfTable().getRandomConflictOpNameByType(Protocol.PROTOCOL_SYM);
-		ProxyTxnId txnId = new ProxyTxnId(0, 0, counterPerClient++);
-		LockRequest lr = new LockRequest(opName);
-		Random random = new Random();
-		int numOfKeys = random.nextInt(5);
-		Debug.printf("Generate %d keys\n", numOfKeys);
-		for(int i = 0; i < numOfKeys; i++){
-			String keyStr = RandomStringUtils.randomAlphabetic(5).toLowerCase();
-			if(keyStr.equalsIgnoreCase("")){
-				throw new RuntimeException("You generated an empty string\n");
-			}
-			lr.addKey(keyStr);
-		}
-		LockReqMessage msg = new LockReqMessage(txnId, myId, lr);
-		Debug.println("Randomly generate a request message\n");
-		Debug.println(msg.toString());
-		return msg;
-	}
 	
 	public void sendTestSymRequestMessage(){
 		PerProfile.startMeasure();
-		Debug.println("Send a test sym request message to server");
+		Debug.println("Send a test sym request message to server\n");
 		String opName = this.getAgent().getConfTable().getRandomConflictOpNameByType(Protocol.PROTOCOL_SYM);
 		ProxyTxnId txnId = new ProxyTxnId(this.getMyId(), 0, counterPerClient++);
 		LockRequest lr = new LockRequest(opName);
-		Random random = new Random();
+		//Random random = new Random();
 		int numOfKeys = 5;//random.nextInt(5);
 		Debug.printf("Generate %d keys\n", numOfKeys);
 		for(int i = 0; i < numOfKeys; i++){
@@ -193,7 +151,7 @@ public class MessageHandlerClientSide extends BaseNode{
 			}
 			lr.addKey(keyStr);
 		}
-		this.agent.getProtocol(Protocol.PROTOCOL_SYM).getPermission(txnId, lr);
+	    this.agent.getProtocol(Protocol.PROTOCOL_SYM).getPermission(txnId, lr);
 		PerProfile.endMeasure();
 	}
 	
@@ -207,28 +165,65 @@ public class MessageHandlerClientSide extends BaseNode{
 		}
 	}
 	
+	public void sendTestASymRequestMessage(){
+		PerProfile.startMeasure();
+		String opName = this.getAgent().getConfTable().getRandomConflictOpNameByType(Protocol.PROTOCOL_ASYM);
+		ProxyTxnId txnId = new ProxyTxnId(this.getMyId(), 0, counterPerClient++);
+		LockRequest lr = new LockRequest(opName);
+		int numOfKeys = 5;//random.nextInt(5);
+		//Debug.printf("Generate %d keys\n", numOfKeys);
+		for(int i = 0; i < numOfKeys; i++){
+			String keyStr = "a_" + i;//RandomStringUtils.randomAlphabetic(5).toLowerCase();
+			if(keyStr.equalsIgnoreCase("")){
+				throw new RuntimeException("You generated an empty string\n");
+			}
+			lr.addKey(keyStr);
+		}
+		Debug.printf("Generate a test asym request %s\n", lr.toString());
+		LockReply lcReply = this.agent.getProtocol(Protocol.PROTOCOL_ASYM).getPermission(txnId, lr);
+		PerProfile.endMeasure();
+		Debug.printf("sendTestASymRequestMessage lcReply received at the end%s\n", lcReply.toString());
+		this.getAgent().cleanUpOperation(txnId, Protocol.PROTOCOL_ASYM);
+	}
+	
+	public void sendTestASymRequestMessageInBatch(int batchSize){
+		if(batchSize <= 0){
+			throw new RuntimeException("batch size must be positive");
+		}
+		while(batchSize > 0){
+			this.sendTestASymRequestMessage();
+			batchSize--;
+		}
+	}
+	
 	public void test(){
 		System.out.println("Test the client and server");
 		Scanner keyboard = new Scanner(System.in);
 		while(true){
-			System.out.println("[1] send a request msg and [2] quit"+ "\n");
+			System.out.println("[1] send a sym msg, [2] send a batch of sym, [3] send a asym msg, [4] send a batch of asym, [5] quit"+ "\n");
 			int input=keyboard.nextInt();
 			switch(input){
 			case 1:
-				sendRandomRequestMessage();
-				break;
-			case 2:
-				keyboard.close();
-				return;
-			case 3:
 				//test the full functionality of the lock service
 				//send symtry message
 				this.sendTestSymRequestMessage();
 				break;
-			case 4:
-				int batchSize = keyboard.nextInt();
-				this.sendTestSymRequestMessageInBatch(batchSize);
+			case 2:
+				int batchSize1 = keyboard.nextInt();
+				System.out.println("Send sym message in batch " + batchSize1);
+				this.sendTestSymRequestMessageInBatch(batchSize1);
 				break;
+			case 3:
+				this.sendTestASymRequestMessage();
+				break;
+			case 4:
+				int batchSize2 = keyboard.nextInt();
+				System.out.println("Send asym message in batch " + batchSize2);
+				this.sendTestASymRequestMessageInBatch(batchSize2);
+				break;
+			case 5:
+				keyboard.close();
+				return;
 			default:
 				keyboard.close();
 				throw new RuntimeException("Not specified yet");

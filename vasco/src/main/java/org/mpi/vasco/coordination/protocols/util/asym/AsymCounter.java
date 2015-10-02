@@ -15,48 +15,12 @@
  *     chengli@mpi-sws.org    
  *******************************************************************************/
 package org.mpi.vasco.coordination.protocols.util.asym;
-
-// TODO: Auto-generated Javadoc
 /**
  * The Class AsymCounter.
  */
 public abstract class AsymCounter {
 	
-	/** The counter name. */
-	String counterName;
-	
-	/**
-	 * Instantiates a new asym counter.
-	 *
-	 * @param _counterName the _counter name
-	 */
-	public AsymCounter(String _counterName){
-		this.setCounterName(_counterName);
-	}
-
-	public String getCounterName() {
-		return counterName;
-	}
-
-	public void setCounterName(String counterName) {
-		this.counterName = counterName;
-	}
-	
 	public abstract boolean isBarrier();
-	
-	public boolean equals(AsymCounter asymC){
-		if(this.getCounterName().equals(asymC.getCounterName())){
-			return true;
-		}
-		return false;
-	}
-	
-	public int hashCode(){
-		return this.getCounterName().hashCode();
-	}
-	
-	public String toString(){
-		return "AsymCounter " + this.getCounterName();
-	}
+	public abstract String toString();
 
 }

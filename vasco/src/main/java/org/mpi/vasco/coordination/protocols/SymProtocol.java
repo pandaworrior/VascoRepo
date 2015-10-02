@@ -205,4 +205,9 @@ public class SymProtocol extends Protocol{
 		this.countersLocalCopy = countersLocalCopy;
 	}
 
+	@Override
+	public void cleanUpLocal(ProxyTxnId txnId) {
+		throw new RuntimeException("should not call this cleanUpLocal in the sym protocol class");
+	}
+
 }

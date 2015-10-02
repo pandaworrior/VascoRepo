@@ -78,8 +78,16 @@ public abstract class Protocol {
 	public abstract void addLockReply(ProxyTxnId txnId, LockReply lcReply);
 	
 	
+	/**
+	 * cleanUp by active requests. for example, the barrier initiator
+	 * @param txnId
+	 */
 	public abstract void cleanUp(ProxyTxnId txnId);
 	
+	/*
+	 * cleanUp upon receiving a request, for example, the barrier participants
+	 */
+	public abstract void cleanUpLocal(ProxyTxnId txnId);
 	
 	/**
 	 * Sets the client.

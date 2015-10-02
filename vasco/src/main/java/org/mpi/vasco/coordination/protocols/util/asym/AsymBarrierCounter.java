@@ -1,9 +1,5 @@
 package org.mpi.vasco.coordination.protocols.util.asym;
 
-//import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-
-//import java.util.List;
-
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 import java.util.Set;
@@ -14,8 +10,7 @@ public class AsymBarrierCounter extends AsymCounter{
 	
 	Set<ProxyTxnId> activeBarrierTxnIdSet;//support search by key and remove by key
 
-	public AsymBarrierCounter(String _counterName) {
-		super(_counterName);
+	public AsymBarrierCounter() {
 		Set<ProxyTxnId> tempList = new ObjectOpenHashSet<ProxyTxnId>();
 		this.setActiveBarrierTxnIdList(tempList);
 	}
@@ -39,6 +34,20 @@ public class AsymBarrierCounter extends AsymCounter{
 	@Override
 	public boolean isBarrier() {
 		return true;
+	}
+	
+	public String toString(){
+		StringBuilder strBuild = new StringBuilder("(barrier counter: ");
+		strBuild.append("{");
+		for(ProxyTxnId txnId : this.getActiveBarrierTxnIdSet()){
+			strBuild.append(txnId.toString());
+			strBuild.append(',');
+		}
+		if(strBuild.charAt(strBuild.length() - 1) == ','){
+			strBuild.deleteCharAt(strBuild.length() - 1);
+		}
+		strBuild.append("})");
+		return strBuild.toString();
 	}
 
 }

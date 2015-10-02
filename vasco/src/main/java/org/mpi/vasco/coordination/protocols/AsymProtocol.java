@@ -21,6 +21,7 @@ import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.coordination.protocols.util.asym.AsymCounterMap;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
+import org.mpi.vasco.util.debug.Debug;
 
 public class AsymProtocol extends Protocol{
 	
@@ -54,9 +55,13 @@ public class AsymProtocol extends Protocol{
 	public
 	LockReply getPermission(ProxyTxnId txnId, LockRequest lcRequest) {
 		
+		if(lcRequest == null){
+			throw new RuntimeException("no lc request for " + txnId.toString());
+		}
+		
 		//put lcRequest in the record list
 		this.asymRequestMap.put(txnId, lcRequest);
-		
+		Debug.println("add lc request data for " + txnId.toString());
 		LockReply lcReply = null;
 		
 		String opName = lcRequest.getOpName();
@@ -74,12 +79,12 @@ public class AsymProtocol extends Protocol{
 			
 			LockReqMessage msg = new LockReqMessage(txnId,
 					client.getMyId(), lcRequest);
-			//send the request to all client
-			client.sentToAllLockClients(msg);
 			
 			//waitlcR
 			List<LockReply> lcReplyList = new ArrayList<LockReply>();
 			this.asymReplyMap.put(txnId, lcReplyList);
+			//send the request to all client
+			client.sentToAllLockClients(msg);
 			synchronized(lcReplyList){
 				while(lcReplyList.size() != this.getNUM_OF_CLIENTS()){
 					try {
@@ -108,6 +113,8 @@ public class AsymProtocol extends Protocol{
 			
 			//no barriers to be waiting, then return null
 		}
+		
+		Debug.println("Received all replies \n");
 		return lcReply;
 	}
 
@@ -134,7 +141,7 @@ public class AsymProtocol extends Protocol{
 		NUM_OF_CLIENTS = nUM_OF_CLIENTS;
 	}
 
-	//TODO: when receive a request from a peer to join a barrier, fetch
+	//when receive a request from a peer to join a barrier, fetch
 	// the counter of the counter parts and send it back
 	@Override
 	public LockReply getLocalPermission(ProxyTxnId txnId, LockRequest lcR) {
@@ -143,6 +150,10 @@ public class AsymProtocol extends Protocol{
 		String opName = lcR.getOpName();
 		Conflict c = this.getMessageClient().getAgent().getConfTable().getConflictByOpName(opName, 
 				Protocol.PROTOCOL_ASYM);
+		
+		if(!this.asymRequestMap.containsKey(txnId)){
+			this.asymRequestMap.put(txnId, lcR);
+		}
 		
 		LockReply lcReply = null;
 		synchronized(this.counterMap){
@@ -162,9 +173,8 @@ public class AsymProtocol extends Protocol{
 	/**
 	 * Once
 	 */
-	public void cleanUpBarrierLocal(ProxyTxnId txnId){
-		//get the key list that this op touched
-		LockRequest lcRequest = this.asymRequestMap.get(txnId);
+	public void cleanUpBarrier(ProxyTxnId txnId, LockRequest lcRequest){
+		Debug.println("cleanUpBarrier\n");
 		synchronized(this.counterMap){
 			this.counterMap.completeLocalBarrierOpCleanUp(lcRequest.getKeyList(), 
 				lcRequest.getOpName(), txnId);
@@ -175,7 +185,7 @@ public class AsymProtocol extends Protocol{
 		}
 	}
 	
-	public void cleanUpNonBarrierLocal(LockRequest lcRequest){
+	public void cleanUpNonBarrier(LockRequest lcRequest){
 		synchronized(this.counterMap){
 			this.counterMap.completeLocalNonBarrierOpCleanUp(lcRequest.getKeyList(), 
 				lcRequest.getOpName());
@@ -188,25 +198,51 @@ public class AsymProtocol extends Protocol{
 		client.sentToAllLockClients(msg);
 	}
 	
+	/*
+	 * actively cleanUp(non-Javadoc)
+	 * @see org.mpi.vasco.coordination.protocols.util.Protocol#cleanUp(org.mpi.vasco.txstore.util.ProxyTxnId)
+	 */
 	@Override
 	public void cleanUp(ProxyTxnId txnId) {
+		Debug.println("cleanUp \n");
 		LockRequest lcRequest = this.asymRequestMap.get(txnId);
+		if(lcRequest == null){
+			throw new RuntimeException("no lc request for " + txnId.toString());
+		}
 		Conflict c = this.getMessageClient().getAgent().getConfTable().getConflictByOpName(
 				lcRequest.getOpName(), 
 				Protocol.PROTOCOL_ASYM);
 		if(!c.isBarrier()){
 			//no barrier
-			this.cleanUpNonBarrierLocal(lcRequest);
+			this.cleanUpNonBarrier(lcRequest);
 		}else{
-			//check it is local or remote
-			if(this.asymReplyMap.containsKey(txnId)){
-				//local, initially submitted to this site
-				this.cleanUpBarrierGlobal(txnId);
-				this.asymReplyMap.remove(txnId);
-			}else{
-				this.cleanUpBarrierLocal(txnId);
-			}
+			this.cleanUpBarrierGlobal(txnId);
 		}
+	}
+	
+
+	@Override
+	public void cleanUpLocal(ProxyTxnId txnId) {
+		// TODO Auto-generated method stub
+		Debug.println("cleanUpLocal \n");
+		LockRequest lcRequest = this.asymRequestMap.get(txnId);
+		if(lcRequest == null){
+			throw new RuntimeException("no lc request for " + txnId.toString());
+		}
+		Conflict c = this.getMessageClient().getAgent().getConfTable().getConflictByOpName(
+				lcRequest.getOpName(), 
+				Protocol.PROTOCOL_ASYM);
+		if(!c.isBarrier()){
+			//no barrier
+			this.cleanUpNonBarrier(lcRequest);
+		}else{
+			this.cleanUpBarrier(txnId, lcRequest);
+		}
+		
+		if(this.asymReplyMap.containsKey(txnId)){
+			this.asymReplyMap.remove(txnId);
+		}
+		this.asymRequestMap.remove(txnId);
 	}
 
 	public AsymCounterMap getCounterMap() {

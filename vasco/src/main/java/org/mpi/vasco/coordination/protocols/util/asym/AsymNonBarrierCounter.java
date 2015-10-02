@@ -6,14 +6,12 @@ public class AsymNonBarrierCounter extends AsymCounter{
 	
 	private long globalCount;
 
-	public AsymNonBarrierCounter(String _counterName) {
-		super(_counterName);
+	public AsymNonBarrierCounter() {
 		this.setLocalCount(0);
 		this.setGlobalCount(0);
 	}
 	
-	public AsymNonBarrierCounter(String _counterName, long lc, long gc) {
-		super(_counterName);
+	public AsymNonBarrierCounter(long lc, long gc) {
 		this.setLocalCount(lc);
 		this.setGlobalCount(gc);
 	}
@@ -51,4 +49,14 @@ public class AsymNonBarrierCounter extends AsymCounter{
 		return false;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder strBuild = new StringBuilder("(non-barrier counter: ");
+		strBuild.append("(local: ");
+		strBuild.append(this.localCount);
+		strBuild.append(", global: ");
+		strBuild.append(this.globalCount);
+		strBuild.append("))");
+		return strBuild.toString();
+	}
 }
