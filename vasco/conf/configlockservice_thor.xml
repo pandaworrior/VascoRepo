@@ -1,0 +1,24 @@
+
+<!--
+  This file is used to configure the lock service for both server side and client side
+  All sub-attributes must be put between two lockService tags.
+  By Cheng
+-->
+
+<lockService>
+    <lockServerCluster lsNum="3">
+    	<lockServer lsId="0" lsIP="139.19.158.41" lsPort="10000" dbPort="10001"/>
+    	<lockServer lsId="1" lsIP="139.19.158.42" lsPort="10002" dbPort="10003"/>
+    	<lockServer lsId="2" lsIP="139.19.158.43" lsPort="10004" dbPort="10005"/>
+    </lockServerCluster>
+    <lockClientGroup lcNum="2">
+    	<lockClient lcId="0" lcIP="139.19.158.44" lcPort="10016"/>
+        <lockClient lcId="1" lcIP="139.19.158.45" lcPort="10017"/>
+    </lockClientGroup>
+    
+    <collectionOfConflicts numOfConflicts="3">
+		<conflict type="asymmetry" leftOperand="a" rightOperand="b" barrier="yes"/>
+		<conflict type="asymmetry" leftOperand="b" rightOperand="a" barrier="no"/>
+		<conflict type="symmetry" leftOperand="c" rightOperand="c"/>
+	</collectionOfConflicts>
+</lockService>

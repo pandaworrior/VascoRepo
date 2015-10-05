@@ -113,6 +113,8 @@ public class MessageHandlerServerSide extends BaseNode{
 	 *
 	 * @param msg the msg
 	 */
+	//TODO: put synchronization point in the following function due the problem with paxos implementation
+	//the current implementation does not work well with concurrency
 	private void process(LockReqMessage msg){
 		Debug.printf("Receive from client %d a lock request message %s\n", msg.getGlobalProxyId(), msg.toString());
 		LockRepMessage repMsg = null;
@@ -122,10 +124,13 @@ public class MessageHandlerServerSide extends BaseNode{
 		}else{
 			//LockRepMessage repMsg = this.getRsmLockService().put(msg.getProxyTxnId().toString(), msg.getLockReq());
 			LockReply reply = null;
-			try {
-				reply = this.getRsmLockService().getAndAdd(msg.getLockReq());
-			} catch (Exception e) {
-				e.printStackTrace();
+			CounterService rsmCounterService = this.getRsmLockService();
+			synchronized(rsmCounterService){
+				try {
+					reply = rsmCounterService.getAndAdd(msg.getLockReq());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 			repMsg = new LockRepMessage(msg.getProxyTxnId(), reply);
 		}
