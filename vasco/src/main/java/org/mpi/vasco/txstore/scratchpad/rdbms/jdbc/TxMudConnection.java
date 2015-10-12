@@ -106,14 +106,15 @@ public class TxMudConnection
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		//set color here TODO:
-		//color = WeakestPreconditionChecker.getColor();
-		color = WeakestPreconditionChecker.getColor(shdOpCreator, shdOp);
-		if(color == -1 || op == null){
-			System.out.println("color or op is not set");
-			System.exit(-1);
+		
+		if(op == null){
+			throw new RuntimeException("op is not set");
 		}
-		if( ! proxy.commit(txId, op, color)){
+		
+		//get the opName
+		String opName = WeakestPreconditionChecker.getShadowOpName(shdOpCreator, shdOp);
+		
+		if( ! proxy.commit(txId, op, opName)){
 			internalAborted = true;
 			throw new SQLException( "commit failed");
 		}
@@ -140,13 +141,13 @@ public class TxMudConnection
 	 * @param color
 	 * @throws SQLException
 	 */
-	public void commit(DBShadowOperation op, int color) throws SQLException {
-		System.out.println("Should not come here in Sifter");
-		inTx = false;
-		if( ! proxy.commit(txId, op, color)){
+	public void commit(DBShadowOperation op) throws SQLException {
+		throw new RuntimeException("Should not come here");
+		/*inTx = false;
+		if( ! proxy.commit(txId, op)){
 			internalAborted = true;
 			throw new SQLException( "commit failed");
-		}
+		}*/
 	}
 	
 	public void setShadowOperation(DBShadowOperation op, int color){

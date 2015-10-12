@@ -2,6 +2,7 @@ package org.mpi.vasco.coordination;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.mpi.vasco.coordination.membership.Role;
 import org.mpi.vasco.coordination.protocols.AsymProtocol;
@@ -11,6 +12,9 @@ import org.mpi.vasco.coordination.protocols.util.LockReply;
 import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.coordination.protocols.util.Protocol;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
+import org.mpi.vasco.txstore.util.WriteSet;
+import org.mpi.vasco.txstore.util.WriteSetEntry;
+import org.mpi.vasco.util.debug.Debug;
 
 /**
  * This class is used as the entrance of the
@@ -45,6 +49,7 @@ public class VascoServiceAgent {
 			throw new RuntimeException("The numbers of protocols do not match");
 		}
 		this.client.setAgent(this);
+		System.out.println("VascoServiceAgent is set up!");
 	}
 	
 	Protocol getProtocol(int protocolType){
@@ -58,14 +63,19 @@ public class VascoServiceAgent {
 		throw new RuntimeException("Not implemented yet");
 	}*/
 	
-	int getProtocolType(LockRequest lcR){
-		int[] pTypes = this.confTable.getProtocolType(lcR.getOpName());
+	//TODO: currently we assume for any conflict operation, it can only be restricted by one type of protocol
+	int getProtocolType(String opName){
+		int[] pTypes = this.confTable.getProtocolType(opName);
 		for(int i = 0; i < pTypes.length; i++){
 			if(pTypes[i] == 1){
 				return i;
 			}
 		}
 		return -1;
+	}
+	
+	int getProtocolType(LockRequest lcR){
+		return this.getProtocolType(lcR.getOpName());
 	}
 	
 	/*LockReply[] getAllPermissions(ProxyTxnId txnId, LockRequest lcR){
@@ -76,17 +86,52 @@ public class VascoServiceAgent {
 		}
 	}*/
 	
-	LockReply getPemissions(ProxyTxnId txnId, LockRequest lcR){
-		int protocolType = this.getProtocolType(lcR);
-		if(protocolType == -1){
-			return null;//do not need any permission
+	public LockRequest generateLockRequestFromWriteSet(String opName, ProxyTxnId txnId, WriteSet wse){
+		int pType = this.getProtocolType(opName);
+		if(pType != -1){
+			//generate a lockrequest
+			LockRequest lr = new LockRequest(opName);
+			for (int i = 0; i < wse.size(); i ++){
+				WriteSetEntry wseEntry = wse.getWriteSetEntry(i);
+				if(wseEntry.isInvariantRelated()){
+					lr.addKey(wseEntry.getObjectId());
+				}
+			}
+			assert(!lr.getKeyList().isEmpty());
+			Debug.printf("Generate a lock request %s\n", lr.toString());
+			return lr;
 		}
-		return this.getProtocol(protocolType).getPermission(txnId, lcR);
+		return null;
 	}
 	
-	public void cleanUpOperation(ProxyTxnId txnId, int protocolType){
-		Protocol p = this.getProtocol(protocolType);
-		p.cleanUp(txnId);
+	public void getPemissions(ProxyTxnId txnId, LockRequest lcR){
+		if(lcR == null){
+			return;
+		}
+		int protocolType = this.getProtocolType(lcR);
+		if(protocolType == -1){
+			throw new RuntimeException("protocol type must be valid");
+		}
+		this.getProtocol(protocolType).getPermission(txnId, lcR);
+	}
+	
+	public void cleanUpLocalOperation(ProxyTxnId txnId, LockRequest lcR){
+		if(lcR == null){
+			return;
+		}
+		int protocolType = this.getProtocolType(lcR);
+		if(protocolType == -1){
+			throw new RuntimeException("protocol type must be valid");
+		}
+		this.getProtocol(protocolType).cleanUp(txnId, lcR.getKeyList(), lcR.getOpName());
+	}
+	
+	public void cleanUpRemoteOperation(ProxyTxnId txnId, Set<String> keys, String opName){
+		int protocolType = this.getProtocolType(opName);
+		if(protocolType == -1){
+			return;
+		}
+		this.getProtocol(protocolType).cleanUp(txnId, keys, opName);
 	}
 	
 	/*Call before committing the transaction*/
@@ -97,8 +142,9 @@ public class VascoServiceAgent {
 		}
 		int protocolType = this.getProtocolType(lcR);
 		if(protocolType != -1){
-			this.getProtocol(protocolType).waitForBeExcuted(txnId, lcR);
+			throw new RuntimeException("protocol type must be valid");
 		}
+		this.getProtocol(protocolType).waitForBeExcuted(txnId, lcR);
 	}
 
 	/**

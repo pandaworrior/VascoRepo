@@ -131,10 +131,12 @@ public class SymProtocol extends Protocol{
 	}
 
 	@Override
-	public void cleanUp(ProxyTxnId txnId) {
-		//update the local counter, how to change the remote?
-		LockRequest lcR = this.symMetaDataMap.get(txnId).getLockRequest();
-		this.incrementLocalCounterByOne(lcR.getKeyList(), lcR.getOpName());
+	public void cleanUp(ProxyTxnId txnId, Set<String> keys, String opName) {
+		this.incrementLocalCounterByOne(keys, opName);
+		if(this.symMetaDataMap.contains(txnId)){
+			this.symMetaDataMap.remove(txnId);
+		}
+		
 	}
 	
 	private boolean isCounterMatching(Map<String, Map<String, Long>> keyCounters){
@@ -206,7 +208,7 @@ public class SymProtocol extends Protocol{
 	}
 
 	@Override
-	public void cleanUpLocal(ProxyTxnId txnId) {
+	public void cleanUpLocal(ProxyTxnId txnId, Set<String> keys, String opName) {
 		throw new RuntimeException("should not call this cleanUpLocal in the sym protocol class");
 	}
 

@@ -27,5 +27,5 @@ public interface ClosedLoopProxyInterface{
     // returns true if the transaction commits, false otherwise
     public boolean commit(ProxyTxnId txn);
 
-	public boolean commit(ProxyTxnId txId, DBShadowOperation op, int color);
+	public boolean commit(ProxyTxnId txId, DBShadowOperation op, String opName);
 }

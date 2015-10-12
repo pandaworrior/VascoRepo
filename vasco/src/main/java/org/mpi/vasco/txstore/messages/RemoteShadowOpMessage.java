@@ -4,27 +4,26 @@ import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.txstore.util.LogicalClock;
 import org.mpi.vasco.txstore.util.Operation;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
-import org.mpi.vasco.txstore.util.ReadWriteSet;
 import org.mpi.vasco.txstore.util.TimeStamp;
 import org.mpi.vasco.txstore.util.WriteSet;
-import org.mpi.vasco.util.UnsignedTypes;
 
 public class RemoteShadowOpMessage extends MessageBase{
     ProxyTxnId txnId;
     Operation op;
     protected TimeStamp timestamp;
     protected LogicalClock logicalClock;
-    int color;
     WriteSet wset;
+    String opName;
 
-    public RemoteShadowOpMessage(ProxyTxnId txnId,  Operation op, TimeStamp ts, LogicalClock lc, int color,  WriteSet wset){
-	super(MessageTags.REMOTESHADOW, computeByteSize(txnId, op, ts, lc, color, wset));
+    public RemoteShadowOpMessage(ProxyTxnId txnId,  Operation op, TimeStamp ts, LogicalClock lc, WriteSet wset,
+    		String opName){
+	super(MessageTags.REMOTESHADOW, computeByteSize(txnId, op, ts, lc, wset, opName));
 	this.txnId = txnId;
 	this.op = op;
 	this.timestamp = ts;
 	this.logicalClock = lc;
-	this.color = color;
 	this.wset = wset;
+	this.opName = opName;
 
 	int offset = getOffset();
 
@@ -38,24 +37,25 @@ public class RemoteShadowOpMessage extends MessageBase{
 	offset += timestamp.getByteSize();
 	logicalClock.getBytes(getBytes(), offset);
 	offset += logicalClock.getByteSize();
-	UnsignedTypes.intToBytes(color, getBytes(), offset);
-	offset += UnsignedTypes.uint16Size;
 	wset.getBytes(getBytes(), offset);
 	offset += wset.getByteSize();
+	byte[] opNameArr = opName.getBytes();
+	System.arraycopy(opNameArr, 0, getBytes(), offset, opNameArr.length);
+	offset += opNameArr.length;
 	if (bytes.length != offset)
 	    throw new RuntimeException("failed to consume entire byte array");
 	
     }
     
     public void encodeMessage(    ProxyTxnId id,  Operation o,TimeStamp ts,
-    LogicalClock lc, int c,  WriteSet wS){
+    LogicalClock lc, WriteSet wS, String opN){
     	txnId = id;
     	op = o;
     	timestamp = ts;
     	logicalClock = lc;
-    	color = c;
     	wset = wS;
-    	this.config(MessageTags.REMOTESHADOW, computeByteSize(txnId, op, timestamp, logicalClock, color, wset));
+    	this.opName = opN;
+    	this.config(MessageTags.REMOTESHADOW, computeByteSize(txnId, op, timestamp, logicalClock, wset, opN));
     	int offset = getOffset();
 
     	byte bytes[] = getBytes();
@@ -68,10 +68,11 @@ public class RemoteShadowOpMessage extends MessageBase{
     	offset += timestamp.getByteSize();
     	logicalClock.getBytes(getBytes(), offset);
     	offset += logicalClock.getByteSize();
-    	UnsignedTypes.intToBytes(color, getBytes(), offset);
-    	offset += UnsignedTypes.uint16Size;
     	wset.getBytes(getBytes(), offset);
     	offset += wset.getByteSize();
+    	byte[] opNameArr = opName.getBytes();
+    	System.arraycopy(opNameArr, 0, getBytes(), offset, opNameArr.length);
+    	offset += opNameArr.length;
     	if (bytes.length != offset)
     	    throw new RuntimeException("failed to consume entire byte array");
     }
@@ -90,10 +91,10 @@ public class RemoteShadowOpMessage extends MessageBase{
 	offset += timestamp.getByteSize();
 	logicalClock = new LogicalClock(b, offset);
 	offset += logicalClock.getByteSize();
-	color = UnsignedTypes.bytesToInt(b, offset);
-	offset += UnsignedTypes.uint16Size;
 	wset = new WriteSet(b, offset);
 	offset += wset.getByteSize();
+	opName = new String(b, offset, b.length - offset);
+	offset += b.length - offset;
 	if (offset != getBytes().length)
 	    throw new RuntimeException("did not consume entire byte array");
     }
@@ -113,10 +114,10 @@ public class RemoteShadowOpMessage extends MessageBase{
     	offset += timestamp.getByteSize();
     	logicalClock = new LogicalClock(b, offset);
     	offset += logicalClock.getByteSize();
-    	color = UnsignedTypes.bytesToInt(b, offset);
-    	offset += UnsignedTypes.uint16Size;
     	wset = new WriteSet(b, offset);
     	offset += wset.getByteSize();
+    	opName = new String(b, offset, b.length - offset);
+    	offset += b.length - offset;
     	if (offset != getBytes().length)
     	    throw new RuntimeException("did not consume entire byte array");
     }
@@ -126,12 +127,10 @@ public class RemoteShadowOpMessage extends MessageBase{
         op = null;
         timestamp = null;
         logicalClock = null;
-        color = 0;
         wset = null;
+        opName = null;
     }
 
-
-    
     public Operation getOperation(){
     	return op;
     }
@@ -142,37 +141,32 @@ public class RemoteShadowOpMessage extends MessageBase{
     
     public TimeStamp getTimeStamp(){
     	return timestamp;
-        }
+    }
 
-        public LogicalClock getLogicalClock(){
+    public LogicalClock getLogicalClock(){
     	return logicalClock;
-        }
-        
-    public boolean isBlue(){
-    	if(color == 1){
-    		return true;
-    	}
-    	return false;
     }
     
     public Operation getShadowOperation(){
     	return op;
     }
+    
     public WriteSet getWset(){
     	return wset;
     }
     
-    public int getColor(){
-    	return color;
+    public String getOpName(){
+    	return this.opName;
     }
 
-    static int computeByteSize(ProxyTxnId tx, Operation op0, TimeStamp ts, LogicalClock lc, int color, WriteSet ws){
-	return tx.getByteSize() + op0.getByteSize() + ts.getByteSize() + lc.getByteSize() + UnsignedTypes.uint16Size + ws.getByteSize();
+    static int computeByteSize(ProxyTxnId tx, Operation op0, TimeStamp ts, LogicalClock lc, WriteSet ws,
+    		String opName){
+	return tx.getByteSize() + op0.getByteSize() + ts.getByteSize() + lc.getByteSize() + ws.getByteSize() + opName.getBytes().length;
     }
 
 
     public String toString(){
-	return "<"+getTagString()+", "+txnId+", "  + op + "," + timestamp + "," + logicalClock+ "," +color + ","+wset+">";
+	return "<"+getTagString() + ", " + txnId + ", " + op + "," + timestamp + "," + logicalClock + "," + wset + "," + opName + ">";
     }
 
 	@Override

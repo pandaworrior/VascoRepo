@@ -55,12 +55,12 @@ public class Test2
 			System.out.println( "complete = " + rwset);
 			
 			long []dcs = { 1, 2};
-			LogicalClock lc = new LogicalClock( dcs, 1);
+			LogicalClock lc = new LogicalClock( dcs);
 			TimeStamp ts = new TimeStamp( 1, n);
 			
 			db.commit( lc, ts);
 
-			LogicalClock lc2 = new LogicalClock( dcs, 1);
+			LogicalClock lc2 = new LogicalClock( dcs);
 			TimeStamp ts2 = new TimeStamp( 1, n+1);
 
 			db2.commit( lc2, ts2);

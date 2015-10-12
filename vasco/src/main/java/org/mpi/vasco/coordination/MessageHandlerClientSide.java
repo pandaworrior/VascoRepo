@@ -104,7 +104,8 @@ public class MessageHandlerClientSide extends BaseNode{
 			throw new RuntimeException("No such a protocol " + Protocol.PROTOCOL_ASYM);
 		}
 		
-		p.cleanUpLocal(msg.getProxyTxnId());
+		LockRequest lcr = ((AsymProtocol) p).getAsymRequestMap().get(msg.getProxyTxnId());
+		p.cleanUpLocal(msg.getProxyTxnId(), lcr.getKeyList(), lcr.getOpName());
 	}
 
 	@Override
@@ -183,7 +184,7 @@ public class MessageHandlerClientSide extends BaseNode{
 		LockReply lcReply = this.agent.getProtocol(Protocol.PROTOCOL_ASYM).getPermission(txnId, lr);
 		PerProfile.endMeasure();
 		Debug.printf("sendTestASymRequestMessage lcReply received at the end%s\n", lcReply.toString());
-		this.getAgent().cleanUpOperation(txnId, Protocol.PROTOCOL_ASYM);
+		this.getAgent().cleanUpLocalOperation(txnId, lr);
 	}
 	
 	public void sendTestASymRequestMessageInBatch(int batchSize){

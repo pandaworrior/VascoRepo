@@ -1,6 +1,7 @@
 package org.mpi.vasco.txstore.coordinator;
 import org.mpi.vasco.util.debug.Debug;
 
+import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.txstore.messages.AckTxnMessage;
 import org.mpi.vasco.txstore.messages.BeginTxnMessage;
 import org.mpi.vasco.txstore.messages.CommitShadowOpMessage;
@@ -33,14 +34,11 @@ public class TransactionRecord{
     LogicalClock snapshotClock;
     LogicalClock mergeClock;
     TimeStamp finishTime;
-    boolean blue = false;
-    long blueEpoch = 0;
     WriteSet wSet = null;
     long realTimeStart = 0;
     boolean readOnly = true;
     boolean local = true;
     Operation shadowOp=null;
-    int color;
     ProxyCommitMessage msg = null;
     BeginTxnMessage bMsg = null;
     AckTxnMessage aMsg = null;
@@ -49,7 +47,15 @@ public class TransactionRecord{
     
     final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     
-    public TransactionRecord(){
+    //for vasco service agent
+    boolean isConflicting = false;
+    LockRequest lcRequest;
+    
+    public String getOpName() {
+		return this.msg.getOpName();
+	}
+
+	public TransactionRecord(){
     	rwSets = new Hashtable<Integer, ReadWriteSet>();
     	slist = new StorageList();
     }
@@ -68,7 +74,6 @@ public class TransactionRecord{
 	rwSets = new Hashtable<Integer, ReadWriteSet>();
 	startTime = t;
 	startClock = lc;
-	blue = false;
         realTimeStart = System.nanoTime();
         slist = new StorageList();
     }
@@ -87,12 +92,13 @@ public class TransactionRecord{
         readOnly = true;
         local = true;
         shadowOp=null;
-        color = 0;
         msg = null;
         bMsg = null;
         rOpMsg = null;
         aMsg = null;
         cSMsg= null;
+        isConflicting = false;
+        lcRequest = null;
     }
     
     public void setProxyCommitMessage(ProxyCommitMessage tmMsg){
@@ -143,23 +149,6 @@ public class TransactionRecord{
 
     public boolean isFinished(){
 	return slist != null && slist.getStorageCount() == rwSets.size();	    
-    }
-    
-    public boolean isRed(){
-	    if(color == 1){
-	    	return false;
-	    }
-	    return true;
-    }
-
-    public boolean isBlue(){
-	    if(color == 1)
-	    	return true;
-	    return false;
-    }
-
-    public void forceBlue(){
-	blue = true;
     }
     
     public boolean isReadonly(){
@@ -235,15 +224,6 @@ public class TransactionRecord{
   public Operation getShadowOp(){
 	  return shadowOp;
   }
-  
-  /**
-   * 
-   * @ set color
-   */
-  
-  public void setColor(int c){
-	  color = c;
-  }
 
     public TimeStamp getStartTime(){
 	return startTime;
@@ -289,18 +269,8 @@ public class TransactionRecord{
 			tmp = tmp.maxClock(rs[i].getLogicalClock());
 	    }
 	}
-	if (isBlue())
-	    tmp = tmp.maxClock(lbc);
 	snapshotClock = tmp;
   //      System.out.println("\t\t^^^^^^setsnapshot end");
-    }
-
-    public long getBlueEpoch(){
-	return blueEpoch;
-    }
-
-    public void setBlueEpoch(long b){
-	blueEpoch = b;
     }
 
      
@@ -321,5 +291,21 @@ public class TransactionRecord{
 	j = j+1;
 	Debug.println(i+" "+j);
     }
+
+	public boolean isConflicting() {
+		return isConflicting;
+	}
+
+	public void setConflicting(boolean isConflicting) {
+		this.isConflicting = isConflicting;
+	}
+
+	public LockRequest getLcRequest() {
+		return lcRequest;
+	}
+
+	public void setLcRequest(LockRequest lcRequest) {
+		this.lcRequest = lcRequest;
+	}
 
 }

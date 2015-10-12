@@ -25,25 +25,17 @@ Contact:
 package org.mpi.vasco.sieve.runtimelogic.weakestpreconditionchecker;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-import java.util.Map.Entry;
 
 import org.mpi.vasco.sieve.runtimelogic.shadowoperationcreator.ShadowOperationCreator;
 import org.mpi.vasco.sieve.runtimelogic.shadowoperationcreator.shadowoperation.DBOpEntry;
-import org.mpi.vasco.sieve.runtimelogic.shadowoperationcreator.shadowoperation.RuntimeFingerPrintGenerator;
 import org.mpi.vasco.sieve.runtimelogic.shadowoperationcreator.shadowoperation.ShadowOperation;
 import org.mpi.vasco.sieve.runtimelogic.staticinformation.StaticFPtoWPsStore;
-import org.mpi.vasco.sieve.staticanalysis.templatecreator.template.Operation;
 import org.mpi.vasco.util.commonfunc.StringOperations;
-import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.PrimitiveType;
 import org.mpi.vasco.util.debug.Debug;
-import org.mpi.vasco.util.weakestprecondtion.Formula;
 import org.mpi.vasco.util.weakestprecondtion.WeakestPrecondition;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class WeakestPreconditionChecker.
  *
@@ -56,6 +48,8 @@ public class WeakestPreconditionChecker {
 	
 	/** The random. */
 	static Random random = new Random();
+	
+	static String nonConflictOpName = "nonconflict";
 	
 	/**
 	 * Sets the static f pto w ps store.
@@ -104,10 +98,11 @@ public class WeakestPreconditionChecker {
 		return true;
 	}*/
 	
-	public static boolean evaluateWeakestPrecondition(ShadowOperationCreator shdOpCreator,
-			ShadowOperation shdOp) {
-		//get the runtime fingerprint
-		//long startTime = System.nanoTime();
+	public static WeakestPrecondition getWeakestPrecondition(ShadowOperationCreator shdOpCreator,
+			ShadowOperation shdOp){
+		if(shdOp == null || shdOp.isEmpty()){
+			return null;
+		}
 		List<String> runtimeFingerPrints = shdOpCreator.getFpGenerator().computeFingerPrint(shdOp);
 		//System.out.println("Latency to generate fps is: " + computeLatency(startTime) + " for the number of entries " + runtimeFingerPrints.size());
 		//long fetchStartTime = System.nanoTime();
@@ -119,32 +114,49 @@ public class WeakestPreconditionChecker {
 			errorStr += "\n fingerprint generated: \n" + StringOperations.concatStringSplitByDot(runtimeFingerPrints);
 			System.out.println(errorStr);
 			throw new RuntimeException("You cannot find a wp!");
-		}else {
-			//evaluate this
-			ArrayList<DBOpEntry> operationList = shdOp.getOperationList();
-			for(int listIndex = 0; listIndex < operationList.size(); listIndex++) {
-				DBOpEntry dbOp = operationList.get(listIndex);
-				String populateFormulaStr = wp.populateAllFormulas(dbOp);
-				if(populateFormulaStr.equals("true")) {
-					continue;
-				}else {
-					if(populateFormulaStr.equals("false")) {
-						//System.out.println("Latency to evaluate wp false is " + computeLatency(evalStartTime) + " for the number of entries " + runtimeFingerPrints.size());
+		}else{
+			return wp;
+		}
+	}
+	
+	public static boolean evaluateWeakestPrecondition(WeakestPrecondition wp,
+			ShadowOperation shdOp) {
+		// evaluate this
+		ArrayList<DBOpEntry> operationList = shdOp.getOperationList();
+		for (int listIndex = 0; listIndex < operationList.size(); listIndex++) {
+			DBOpEntry dbOp = operationList.get(listIndex);
+			String populateFormulaStr = wp.populateAllFormulas(dbOp);
+			if (populateFormulaStr.equals("true")) {
+				continue;
+			} else {
+				if (populateFormulaStr.equals("false")) {
+					// System.out.println("Latency to evaluate wp false is " +
+					// computeLatency(evalStartTime) +
+					// " for the number of entries " +
+					// runtimeFingerPrints.size());
+					return false;
+				} else {
+					// System.out.println("try to evaluate " +
+					// populateFormulaStr);
+					// if(!SimpleExpressionEvaluator.evalBoolExpression(populateFormulaStr))
+					// {
+					if (!SimpleInequalityExpressionEvaluator
+							.evalBoolExpression(populateFormulaStr)) {
+						Debug.println("The formula evaluation is false "
+								+ populateFormulaStr);
+						// System.out.println("Latency to evaluate wp false is "
+						// + computeLatency(evalStartTime) +
+						// " for the number of entries " +
+						// runtimeFingerPrints.size());
 						return false;
-					}else {
-						//System.out.println("try to evaluate " + populateFormulaStr);
-						//if(!SimpleExpressionEvaluator.evalBoolExpression(populateFormulaStr)) {
-						if(!SimpleInequalityExpressionEvaluator.evalBoolExpression(populateFormulaStr)) {
-							Debug.println("The formula evaluation is false " + populateFormulaStr);
-							//System.out.println("Latency to evaluate wp false is " + computeLatency(evalStartTime) + " for the number of entries " + runtimeFingerPrints.size());
-							return false;
-						}
 					}
 				}
 			}
 		}
 		Debug.println("The formula evaluation is true");
-		//System.out.println("Latency to evaluate wp true is " + computeLatency(evalStartTime) + " for the number of entries " + runtimeFingerPrints.size());
+		// System.out.println("Latency to evaluate wp true is " +
+		// computeLatency(evalStartTime) + " for the number of entries " +
+		// runtimeFingerPrints.size());
 		return true;
 	}
 	
@@ -155,29 +167,33 @@ public class WeakestPreconditionChecker {
 	 * @param shdOp the shd op
 	 * @return the color
 	 */
-	public static int getColor(ShadowOperationCreator shdOpCreator, ShadowOperation shdOp) {
+	public static int isCoordinationNeeded(WeakestPrecondition wp, ShadowOperation shdOp) {
 		Debug.println("Ask the wp evaluation to evaluate the formulas");
-		if(shdOp == null || shdOp.isEmpty())
-			return 0;
-		if(evaluateWeakestPrecondition(shdOpCreator, shdOp)) {
-			Debug.println("WP evaluates to true, color is 0");
+		if(wp != null){
+			if(!evaluateWeakestPrecondition(wp, shdOp)){
+				Debug.println("WP evaluates to false");
+				return 1;
+			}
+		}
+		Debug.println("WP evaluates to true");
+		return 0;
+		/*if(evaluateWeakestPrecondition(wp, shdOp)) {
+			Debug.println("WP evaluates to true");
 			return 0;
 		}else {
-			Debug.println("WP evaluates to false, color is 1");
+			Debug.println("WP evaluates to false");
 			return 1;
-		}
+		}*/
 	}
 	
-	/*static boolean evaluateWeakestPrecondition() {
-		return random.nextBoolean();
-	}
-	
-	static public int getColor() {
-		if(evaluateWeakestPrecondition()) {
-			return 0;
-		}else {
-			return 1;
+	public static String getShadowOpName(ShadowOperationCreator shdOpCreator, ShadowOperation shdOp){
+		WeakestPrecondition wp = getWeakestPrecondition(shdOpCreator, shdOp);
+		int result = isCoordinationNeeded(wp, shdOp);
+		if(result == 0){
+			return nonConflictOpName;
+		}else{
+			return wp.getSimplifiedOpName();
 		}
-	}*/
+	}
 
 }

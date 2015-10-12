@@ -45,16 +45,7 @@ public class MessageTags extends MessageTagBase{
 	// remote
 	// transactions
 
-	public final static int GIMMETHEBLUE = 13; // sent between
-	// coordinators when
-	// one coordinator is
-	// ready for the blue
-	// token but does not hold it
 	public final static int STORAGECOMMITTXN = 14;
-
-	public final static int BLUETOKENGRANT = 15;
-	
-	public final static int BLUETOKENGRANTACK = 16;
 	
 	public final static int PROXYCOMMIT = 17;
 	
@@ -90,14 +81,8 @@ public class MessageTags extends MessageTagBase{
 			return " TxnMetaInformation";
 		case MessageTags.FINISHREMOTE:
 			return " FinishRemote";
-		case MessageTags.GIMMETHEBLUE:
-			return " GimmeTheBlue";
 		case MessageTags.STORAGECOMMITTXN:
 			return " StorageCommitTxn";
-		case MessageTags.BLUETOKENGRANT:
-			return "BlueTokenGrant";
-		case MessageTags.BLUETOKENGRANTACK:
-			return "BlueTokenGrantAck";
 		case MessageTags.COMMITSHADOW:
 			return "CommitShadowOp";
 		case MessageTags.PROXYCOMMIT:

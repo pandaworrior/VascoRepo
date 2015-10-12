@@ -43,7 +43,7 @@ public class TestConcurrency {
 					//Debug.println( "complete = " + rwset);
 					
 					long []dcs = { 1, 2};
-					LogicalClock lc = new LogicalClock( dcs, 1);
+					LogicalClock lc = new LogicalClock( dcs);
 					TimeStamp ts = new TimeStamp( 1, n);
 					if(count % 10 == 0){
 						Thread.sleep(40);

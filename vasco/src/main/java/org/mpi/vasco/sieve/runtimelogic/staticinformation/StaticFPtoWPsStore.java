@@ -152,9 +152,9 @@ public class StaticFPtoWPsStore {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		assert(contentLines.size() % 2 == 0);
-		Debug.println("receive input size is " +contentLines.size()/2);
-		for(int i = 0; i < contentLines.size(); i = i+2){
+		assert(contentLines.size() % 3 == 0);
+		Debug.println("receive input size is " +contentLines.size()/3);
+		for(int i = 0; i < contentLines.size(); i = i+3){
 			String fpStr = contentLines.get(i);
 			assert(fpStr.startsWith(openerOfFingerPrint));
 			String wpStr = contentLines.get(i+1);
@@ -169,8 +169,9 @@ public class StaticFPtoWPsStore {
 				fingerPrints[0] = pureFpStr;
 			}
 			String pureWpStr = wpStr.substring(openerOfWeakestPrecondition.length());
+			String simplifiedOpName = contentLines.get(i+2);
 			this.addStaticFPtoWPsStoreNode( fingerPrints, 
-					new WeakestPrecondition(pureWpStr));
+					new WeakestPrecondition(pureWpStr, simplifiedOpName));
 		}
 		
 		Debug.println("generated wp node number " + this.numOfWPNode);

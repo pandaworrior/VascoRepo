@@ -47,7 +47,7 @@ public class Test5
 			Debug.println( "complete = " + rwset);
 			
 			long []dcs = { 1, 2};
-			LogicalClock lc = new LogicalClock( dcs, 1);
+			LogicalClock lc = new LogicalClock( dcs);
 			TimeStamp ts = new TimeStamp( 1, n);
 
 			db.commit( lc, ts);
@@ -66,7 +66,7 @@ public class Test5
 			System.out.println( "complete = " + rwset);
 			
 			long []dcs2 = { n, 2};
-			LogicalClock lc2 = new LogicalClock( dcs2, 1);
+			LogicalClock lc2 = new LogicalClock( dcs2);
 			TimeStamp ts2 = new TimeStamp( 1, n+1);
 			
 			db.commit( lc2, ts2);
@@ -86,7 +86,7 @@ public class Test5
 			System.out.println( "complete = " + rwset);
 			
 			long []dcs3 = { n + 1, 2};
-			LogicalClock lc3 = new LogicalClock( dcs3, 1);
+			LogicalClock lc3 = new LogicalClock( dcs3);
 			TimeStamp ts3 = new TimeStamp( 1, n+2);
 			
 			db.commit( lc3, ts3);

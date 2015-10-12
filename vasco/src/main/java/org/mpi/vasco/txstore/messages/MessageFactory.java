@@ -4,13 +4,10 @@ import org.mpi.vasco.txstore.messages.AbortTxnMessage;
 import org.mpi.vasco.txstore.messages.AckCommitTxnMessage;
 import org.mpi.vasco.txstore.messages.AckTxnMessage;
 import org.mpi.vasco.txstore.messages.BeginTxnMessage;
-import org.mpi.vasco.txstore.messages.BlueTokenGrantAckMessage;
-import org.mpi.vasco.txstore.messages.BlueTokenGrantMessage;
 import org.mpi.vasco.txstore.messages.CommitShadowOpMessage;
 import org.mpi.vasco.txstore.messages.CommitTxnMessage;
 import org.mpi.vasco.txstore.messages.FinishRemoteMessage;
 import org.mpi.vasco.txstore.messages.FinishTxnMessage;
-import org.mpi.vasco.txstore.messages.GimmeTheBlueMessage;
 import org.mpi.vasco.txstore.messages.MessageTags;
 import org.mpi.vasco.txstore.messages.OperationEncodingMessage;
 import org.mpi.vasco.txstore.messages.OperationMessage;
@@ -98,12 +95,6 @@ public class MessageFactory{
 	    return new TxnMetaInformationMessage(bytes);
 	case MessageTags.FINISHREMOTE:
 	    return new FinishRemoteMessage(bytes); 
-	case MessageTags.GIMMETHEBLUE:
-	    return new GimmeTheBlueMessage(bytes);
-	case MessageTags.BLUETOKENGRANT:
-		return new BlueTokenGrantMessage(bytes);
-	case MessageTags.BLUETOKENGRANTACK:
-		return new BlueTokenGrantAckMessage(bytes);
 	case MessageTags.COMMITSHADOW:
 		CommitShadowOpMessage csOpMsg = CommitShadowOpMPool.borrowObject();
 		if(csOpMsg == null)

@@ -16,6 +16,8 @@
  *******************************************************************************/
 package org.mpi.vasco.coordination.protocols.util;
 
+import java.util.Set;
+
 import org.mpi.vasco.coordination.MessageHandlerClientSide;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
@@ -82,12 +84,12 @@ public abstract class Protocol {
 	 * cleanUp by active requests. for example, the barrier initiator
 	 * @param txnId
 	 */
-	public abstract void cleanUp(ProxyTxnId txnId);
+	public abstract void cleanUp(ProxyTxnId txnId, Set<String> keys, String opName);
 	
 	/*
 	 * cleanUp upon receiving a request, for example, the barrier participants
 	 */
-	public abstract void cleanUpLocal(ProxyTxnId txnId);
+	public abstract void cleanUpLocal(ProxyTxnId txnId, Set<String> keys, String opName);
 	
 	/**
 	 * Sets the client.

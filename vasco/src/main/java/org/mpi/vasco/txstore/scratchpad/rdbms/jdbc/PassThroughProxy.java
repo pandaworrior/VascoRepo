@@ -139,7 +139,7 @@ public class PassThroughProxy implements ClosedLoopProxyInterface {
 					"No active scratchpad for current transaction");
 		try {
 			long[] dcs = { 1, 2 };
-			LogicalClock lc = new LogicalClock(dcs, 1);
+			LogicalClock lc = new LogicalClock(dcs);
 			int currentCounter = incrementCounter();
 			TimeStamp ts = new TimeStamp(1, currentCounter);
 			pad.commit(lc, ts);
@@ -169,21 +169,26 @@ public class PassThroughProxy implements ClosedLoopProxyInterface {
 		}
 	}
 
-	public boolean commit(ProxyTxnId txId, DBShadowOperation op, int color) {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean commit(ProxyTxnId txId, DBShadowOperation op) {
+		throw new RuntimeException("Not implemented yet!");
+		//return false;
 	}
 
 	@Override
 	public ResultSet executeOrig(Operation op, ProxyTxnId txnid) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("Not implemented yet!");
+		//return null;
 	}
 
 	@Override
 	public ResultSet executeOrig(Operation op, ProxyTxnId pr, int sid) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("Not implemented yet!");
+		//return null;
+	}
+
+	@Override
+	public boolean commit(ProxyTxnId txId, DBShadowOperation op, String opName) {
+		throw new RuntimeException("Not implemented yet!");
 	}
 
 }

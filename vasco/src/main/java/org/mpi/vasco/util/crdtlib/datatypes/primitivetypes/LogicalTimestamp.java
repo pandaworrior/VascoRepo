@@ -28,8 +28,6 @@ public class LogicalTimestamp implements Comparable<LogicalTimestamp>{
 	/** The dc num. */
 	int dcNum;
 	
-	long blue;
-	
 	/** The dc count array. */
 	long[] dcCountArray;
 	
@@ -40,16 +38,14 @@ public class LogicalTimestamp implements Comparable<LogicalTimestamp>{
 	 */
 	public LogicalTimestamp(int dcN){
 		this.dcNum = dcN;
-		this.blue = 0;
-		dcCountArray = new long[this.dcNum + 1];
-		for(int i = 0 ; i < this.dcNum + 1; i++){
+		dcCountArray = new long[this.dcNum];
+		for(int i = 0 ; i < this.dcNum; i++){
 			dcCountArray[i] = 0;
 		}
 	}
 	
 	public LogicalTimestamp(LogicalClock lc) {
 		this.dcNum = lc.getDcEntries().length;
-		this.blue = lc.getBlueCount();
 		this.dcCountArray = lc.getDcEntries();
 	}
 	
@@ -74,7 +70,7 @@ public class LogicalTimestamp implements Comparable<LogicalTimestamp>{
 	public int compareTo(LogicalTimestamp lts) {
 		boolean isSmallerThan = false;
 		boolean isLargerThan = false;
-		for(int i = 0; i < this.dcNum + 1; i++){
+		for(int i = 0; i < this.dcNum; i++){
 			if(dcCountArray[i] < lts.getTimestampArray()[i]){
 				isSmallerThan = true;
 			}else if(dcCountArray[i] >= lts.getTimestampArray()[i]){
@@ -102,16 +98,20 @@ public class LogicalTimestamp implements Comparable<LogicalTimestamp>{
 		for(int i = 0; i < this.dcNum; i++){
 			str += this.dcCountArray[i] + "-";
 		}
-		str += this.dcCountArray[this.dcNum];
+		str += this.dcCountArray[this.dcNum - 1];
 		return str;
 	}
 	
 	public String getValueString() {
-		String str = "" + this.blue;
+		StringBuilder str = new StringBuilder("");
 		for(int i = 0; i < this.dcNum; i++){
-			str += "-" + this.dcCountArray[i];
+			str.append(this.dcCountArray[i]);
+			str.append('-');
 		}
-		return str;
+		if(str.charAt(str.length() - 1) == '-'){
+			str.deleteCharAt(str.length() - 1);
+		}
+		return str.toString();
 	}
 
 }

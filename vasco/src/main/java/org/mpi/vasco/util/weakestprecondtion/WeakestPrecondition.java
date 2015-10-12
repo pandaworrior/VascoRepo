@@ -36,18 +36,29 @@ public class WeakestPrecondition {
 	/** The delimiter. */
 	static String delimiter = " ";
 	
+	String simplifiedOpName;
+	
+	public String getSimplifiedOpName() {
+		return simplifiedOpName;
+	}
+
+	public void setSimplifiedOpName(String simplifiedOpName) {
+		this.simplifiedOpName = simplifiedOpName;
+	}
+
 	/**
 	 * Instantiates a new weakest precondition.
 	 *
 	 * @param wpStr the wp str
 	 */
-	public WeakestPrecondition(String wpStr){
+	public WeakestPrecondition(String wpStr, String simOpName){
 		this.formulaList = new ArrayList<Formula>();
 		String[] formStrs = wpStr.split(delimiter);
 		for(int i = 0; i < formStrs.length; i++){
 			Formula f = FormulaFactory.createFormulaByString(formStrs[i]);
 			this.formulaList.add(f);
 		}
+		this.setSimplifiedOpName(simOpName);
 	}
 
 	/**

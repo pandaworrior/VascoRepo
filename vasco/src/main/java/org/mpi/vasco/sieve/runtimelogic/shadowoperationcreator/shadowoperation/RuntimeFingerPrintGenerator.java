@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import org.mpi.vasco.util.debug.Debug;
-// TODO: Auto-generated Javadoc
 /**
  * The Class RuntimeFingerPrintGenerator.
  *

@@ -5,20 +5,20 @@ import org.mpi.vasco.util.UnsignedTypes;
 public class WriteSetEntry{
 
     String obj; 
-    int  color;
+    int  invariantRelated;//1 => yes, 0 => no
     int deleted;
     
 
-    public WriteSetEntry(String objId, int color, int deleted){
-    //Debug.printf("create write set entry id %s, color %d deleted %d\n", objId, color, deleted);
+    public WriteSetEntry(String objId, int iR, int deleted){
+    //Debug.printf("create write set entry id %s, invariant related %d deleted %d\n", objId, iR, deleted);
 	this.obj = objId;
-	this.color = color;
+	this.invariantRelated = iR;
 	this.deleted = deleted;
     }
 
     public WriteSetEntry(byte b[], int offset){
     
-    int objLength = UnsignedTypes.bytesToInt(b, offset);
+    	int objLength = UnsignedTypes.bytesToInt(b, offset);
     	offset += UnsignedTypes.uint16Size;
     	
     	byte[] tmp = new byte[objLength];
@@ -27,30 +27,30 @@ public class WriteSetEntry{
     		offset++;
     	}
     	obj = new String(tmp);
-	color = UnsignedTypes.bytesToInt(b, offset);
-	offset += UnsignedTypes.uint16Size;
-	deleted = UnsignedTypes.bytesToInt(b, offset);
-	offset += UnsignedTypes.uint16Size;
+    	invariantRelated = UnsignedTypes.bytesToInt(b, offset);
+    	offset += UnsignedTypes.uint16Size;
+    	deleted = UnsignedTypes.bytesToInt(b, offset);
+    	offset += UnsignedTypes.uint16Size;
     }
 
     public void getBytes(byte[] b, int offset){
-	if (offset + getByteSize() > b.length)
-	    throw new RuntimeException("not enough bytes");
-    int objLength = obj.getBytes().length ;
-	
-	UnsignedTypes.intToBytes(objLength, b, offset);
-	offset += UnsignedTypes.uint16Size;
-	
-	byte[] tmp = obj.getBytes();
-	for(int i =0; i <objLength; i++ ){
-		b[offset] = tmp[i];
-		offset++;
-	}
-	
-	UnsignedTypes.intToBytes(color, b, offset);
-	offset += UnsignedTypes.uint16Size;
-	UnsignedTypes.intToBytes(deleted, b, offset);
-	offset += UnsignedTypes.uint16Size;
+    	if (offset + getByteSize() > b.length)
+    		throw new RuntimeException("not enough bytes");
+	    int objLength = obj.getBytes().length ;
+		
+		UnsignedTypes.intToBytes(objLength, b, offset);
+		offset += UnsignedTypes.uint16Size;
+		
+		byte[] tmp = obj.getBytes();
+		for(int i =0; i <objLength; i++ ){
+			b[offset] = tmp[i];
+			offset++;
+		}
+		
+		UnsignedTypes.intToBytes(invariantRelated, b, offset);
+		offset += UnsignedTypes.uint16Size;
+		UnsignedTypes.intToBytes(deleted, b, offset);
+		offset += UnsignedTypes.uint16Size;
     }
 
     public final int getByteSize(){
@@ -59,19 +59,7 @@ public class WriteSetEntry{
     
 
     public String getObjectId(){
-	return obj;
-    }
-
-    public int getColor(){
-	return color;
-    }
-    
-    public boolean isBlue(){
-	return color == 1;
-    }
-
-    public boolean isRed(){
-	return color == 0;
+    	return obj;
     }
     
     public boolean isDeleted(){
@@ -83,8 +71,20 @@ public class WriteSetEntry{
 
     
     public String toString(){
-	return "/"+obj+" "+color+ " " + deleted+"/";
+	return "/"+obj+" "+invariantRelated+ " " + deleted+"/";
     }
+
+	public int getInvariantRelated() {
+		return invariantRelated;
+	}
+
+	public void setInvariantRelated(int invariantRelated) {
+		this.invariantRelated = invariantRelated;
+	}
+	
+	public boolean isInvariantRelated(){
+		return invariantRelated == 1;
+	}
 
 }
 

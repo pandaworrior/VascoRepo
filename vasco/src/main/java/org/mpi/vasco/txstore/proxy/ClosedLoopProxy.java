@@ -250,20 +250,20 @@ public class ClosedLoopProxy extends BaseNode implements ClosedLoopProxyInterfac
 	}
 	
 	Object txnNumObj = new Object();
-	public boolean commit(ProxyTxnId txn, DBShadowOperation op, int color) {
+	public boolean commit(ProxyTxnId txn, DBShadowOperation op, String opName) {
 		TransactionInfo info = transactions.get(txn);
 		
-		info.setShadowOp(op, color);
+		info.setShadowOp(op);
 		
-		Debug.println("proxy commit " + txn + " " + op +" " + color + " count " + info.count);
+		Debug.println("proxy commit " + txn + " " + op  + " count " + info.count);
 		ScratchpadInterface tmp = scratchpads.get(txn);
 		ReadWriteSet rws = tmp.complete();
 		Debug.println("rws " + rws);
 		ProxyCommitMessage pcm = mf.borrowProxyCommitMessage();
 		if(pcm == null)
-			pcm = new ProxyCommitMessage(txn, rws, op, color);
+			pcm = new ProxyCommitMessage(opName, txn, rws, op);
 		else
-			pcm.encodeMessage(txn, rws, op, color);
+			pcm.encodeMessage(opName, txn, rws, op);
 		info.setProxyCommitMessage(pcm);
 		//Debug.println("commit a transaction " + txn + " " + pcm + "\n");
 		sendToCoordinator(pcm);
@@ -345,11 +345,10 @@ public class ClosedLoopProxy extends BaseNode implements ClosedLoopProxyInterfac
     	long time = System.currentTimeMillis();
 		if( time > startmi && time < endmi ){
 			if(isCommited){
-				if(info.isBlue()){
-					bluetnxcounter.incrementAndGet();
-				}else{
-					redtnxcounter.incrementAndGet();
-				}
+				//no blue and no red anymore, but keep both for output, the number should be equal to each other
+				//which is the total num of committed txns
+				bluetnxcounter.incrementAndGet();
+				redtnxcounter.incrementAndGet();
 			}//commit
 			else{
 				aborttnxcounter.incrementAndGet();

@@ -39,7 +39,6 @@ public class TransactionInfo{
     BeginTxnMessage bMsg;
     ProxyCommitMessage pcMsg;
     Operation shadowOp; //shadowOp
-    int color;
     int count;
     ReadWriteSet rws;
     long startTime;
@@ -55,7 +54,6 @@ public class TransactionInfo{
 	results = new Vector<Result>();
 	operations = new Vector<Operation>();
 	shadowOp = null;
-	color = 0;
 	startTime = 0;
     }
     
@@ -66,7 +64,6 @@ public class TransactionInfo{
     	results.clear();
     	operations.clear();
     	shadowOp = null;
-    	color = 0;
     	startTime = 0;
         ackMsg = null;
         ts = null;
@@ -163,24 +160,12 @@ public class TransactionInfo{
      * 
      * @param set shadow operation for a transaction
      */
-    public void setShadowOp(Operation op, int color){	
+    public void setShadowOp(Operation op){	
     	shadowOp = op;
-    	this.color = color;
     }
     
     public Operation getShadowOp(){
     	return shadowOp;
-    }
-    
-    public int getColor(){
-    	return color;
-    }
-    
-    public boolean isBlue(){
-    	if(color == 1)
-    		return true;
-    	else
-    		return false;
     }
     
     public void setStartTime(){

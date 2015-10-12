@@ -30,6 +30,14 @@ public class AsymProtocol extends Protocol{
 	
 	private Map<ProxyTxnId, LockRequest> asymRequestMap;
 	
+	public Map<ProxyTxnId, LockRequest> getAsymRequestMap() {
+		return asymRequestMap;
+	}
+
+	public void setAsymRequestMap(Map<ProxyTxnId, LockRequest> asymRequestMap) {
+		this.asymRequestMap = asymRequestMap;
+	}
+
 	//the number of clients will join the barriers
 	private int NUM_OF_CLIENTS;
 	
@@ -171,11 +179,11 @@ public class AsymProtocol extends Protocol{
 	/**
 	 * Once
 	 */
-	public void cleanUpBarrier(ProxyTxnId txnId, LockRequest lcRequest){
+	public void cleanUpBarrier(ProxyTxnId txnId, Set<String> keys, String opName){
 		Debug.println("cleanUpBarrier\n");
 		synchronized(this.counterMap){
-			this.counterMap.completeLocalBarrierOpCleanUp(lcRequest.getKeyList(), 
-				lcRequest.getOpName(), txnId);
+			this.counterMap.completeLocalBarrierOpCleanUp(keys, 
+				opName, txnId);
 		}
 		synchronized(this.activeBarriers){
 			this.activeBarriers.remove(txnId);
@@ -183,13 +191,17 @@ public class AsymProtocol extends Protocol{
 		}
 	}
 	
-	public void cleanUpNonBarrier(LockRequest lcRequest){
+	public void cleanUpNonBarrier(Set<String> keys, String opName){
 		synchronized(this.counterMap){
-			this.counterMap.completeLocalNonBarrierOpCleanUp(lcRequest.getKeyList(), 
-				lcRequest.getOpName());
+			this.counterMap.completeLocalNonBarrierOpCleanUp(keys, 
+				opName);
 		}
 	}
 	
+	/*
+	 * Is not called right now, it is used when the replicated message doesn't carry
+	 * the sufficient information for cleaning up barrier and non-barrier
+	 */
 	public void cleanUpBarrierGlobal(ProxyTxnId txnId){
 		//need to send a message to all clients
 		CleanUpBarrierMessage msg = new CleanUpBarrierMessage(txnId);
@@ -201,7 +213,7 @@ public class AsymProtocol extends Protocol{
 	 * @see org.mpi.vasco.coordination.protocols.util.Protocol#cleanUp(org.mpi.vasco.txstore.util.ProxyTxnId)
 	 */
 	@Override
-	public void cleanUp(ProxyTxnId txnId) {
+	/*public void cleanUp(ProxyTxnId txnId) {
 		Debug.println("cleanUp \n");
 		LockRequest lcRequest = this.asymRequestMap.get(txnId);
 		if(lcRequest == null){
@@ -216,31 +228,40 @@ public class AsymProtocol extends Protocol{
 		}else{
 			this.cleanUpBarrierGlobal(txnId);
 		}
+	}*/
+	
+	
+	/*
+	 * We do this locally since the replicated message can be used to clean up
+	 * therefore, no need to send a separated message to clean
+	 * @see org.mpi.vasco.coordination.protocols.util.Protocol#cleanUp(org.mpi.vasco.txstore.util.ProxyTxnId)
+	 */
+	public void cleanUp(ProxyTxnId txnId, Set<String> keys, String opName) {
+		Debug.println("cleanUp \n");
+		this.cleanUpLocal(txnId, keys, opName);
 	}
 	
 
 	@Override
-	public void cleanUpLocal(ProxyTxnId txnId) {
-		// TODO Auto-generated method stub
+	public void cleanUpLocal(ProxyTxnId txnId, Set<String> keys, String opName) {
 		Debug.println("cleanUpLocal \n");
-		LockRequest lcRequest = this.asymRequestMap.get(txnId);
-		if(lcRequest == null){
-			throw new RuntimeException("no lc request for " + txnId.toString());
-		}
 		Conflict c = this.getMessageClient().getAgent().getConfTable().getConflictByOpName(
-				lcRequest.getOpName(), 
+				opName, 
 				Protocol.PROTOCOL_ASYM);
+		
 		if(!c.isBarrier()){
 			//no barrier
-			this.cleanUpNonBarrier(lcRequest);
+			this.cleanUpNonBarrier(keys, opName);
 		}else{
-			this.cleanUpBarrier(txnId, lcRequest);
+			this.cleanUpBarrier(txnId, keys, opName);
 		}
 		
 		if(this.asymReplyMap.containsKey(txnId)){
 			this.asymReplyMap.remove(txnId);
 		}
-		this.asymRequestMap.remove(txnId);
+		if(this.asymRequestMap.containsKey(txnId)){
+			this.asymRequestMap.remove(txnId);
+		}		
 	}
 
 	public AsymCounterMap getCounterMap() {

@@ -8,7 +8,6 @@ import org.mpi.vasco.txstore.messages.MessageTags;
 // receiving messages
 import org.mpi.vasco.txstore.messages.AckCommitTxnMessage;
 import org.mpi.vasco.txstore.messages.BeginTxnMessage;
-import org.mpi.vasco.txstore.messages.BlueTokenGrantMessage;
 import org.mpi.vasco.txstore.messages.CommitShadowOpMessage;
 import org.mpi.vasco.txstore.messages.FinishTxnMessage;
 import org.mpi.vasco.txstore.messages.MessageFactory;
@@ -24,8 +23,9 @@ import org.mpi.vasco.txstore.messages.AckTxnMessage;
 import org.mpi.vasco.txstore.messages.CommitTxnMessage;
 import org.mpi.vasco.txstore.messages.AbortTxnMessage;
 import org.mpi.vasco.txstore.messages.FinishRemoteMessage;
-import org.mpi.vasco.txstore.messages.GimmeTheBlueMessage;
 
+import org.mpi.vasco.txstore.scratchpad.rdbms.util.DBSifterEmptyShd;
+import org.mpi.vasco.txstore.scratchpad.rdbms.util.DBSifterShd;
 import org.mpi.vasco.txstore.storageshim.StorageShim;
 import org.mpi.vasco.txstore.util.Operation;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
@@ -42,6 +42,9 @@ import org.mpi.vasco.util.Counter;
 import org.mpi.vasco.util.ObjectPool;
 import org.mpi.vasco.util.debug.Debug;
 
+import org.mpi.vasco.coordination.VascoServiceAgent;
+import org.mpi.vasco.coordination.VascoServiceAgentFactory;
+import org.mpi.vasco.coordination.protocols.util.LockRequest;
 import org.mpi.vasco.network.messages.MessageBase;
 import org.mpi.vasco.network.netty.NettyTCPSender;
 import org.mpi.vasco.network.netty.NettyTCPReceiver;
@@ -59,17 +62,16 @@ import java.util.Set;
 import java.util.Vector;
 
 public class NewCoordinator extends BaseNode {
-
+	
+	private static final long serialVersionUID = 1L;
 	MessageFactory mf;
 	long lastTxnCount = 0;
 	
 	ObjectPool<TransactionRecord> txnPool;
 	Hashtable<ProxyTxnId, TransactionRecord> records;
-	Vector<TransactionRecord> blueCache;
 	LogicalClock lastCommitted;
 	LogicalClock lastVisible;
 	UpdateTable objectUpdates;
-	long TOKEN_SIZE = -1;
 	
 	//debug
 	long checkTxnNum = 0;
@@ -80,58 +82,26 @@ public class NewCoordinator extends BaseNode {
 	long timeToCommit = 0;
 	long commitCount = 0;
 	long manualAbort = 0;
-	long redReadAbort = 0;
-	long blueReadAbort = 0;
-	long blueWriteAbort = 0;
+	long nonConflictOpReadAbort = 0;
+	long conflictOpReadAbort = 0;
+	long conflictOpWriteAbort = 0;
 	long redoCount = 0;
-	boolean blueTokenGrantAcquired = false;
-	boolean blueTokenTryToExpired = false;
-	boolean blueTokenHold = false;
-	long myBlueTokenBudget = 0;
-	long remoteBlueCount = 0;
-	// different data centers
-	Hashtable<Integer, Long> GimmMessageTable;// storage dcId with gimm message
-											// and fressness
-
-	long blueTokenExpiredTime = 0;
-	long blueTxnQuietTime = 0; //a period in which no blue txn coming
-	Object blueTokenSynObj = new Object(); // syn object for blueTokenGrant
-											// blueTokenBudget
-											// blueTokenGrantHold
-
-	Object expireBlueTokenWaiting = new Object();
 
 	Object lastCommittedSynObj = new Object(); // syn object for lastCommitted
-
-	Object coordiantorStarted = new Object(); // to start the working
-												// thread
-	Thread expireBlueTokenThread;
 	
-	long blueTokenReceivedTime = Long.MAX_VALUE;
+	//objects for vasco coordination service
+	VascoServiceAgent vascoAgent;
 
-	public NewCoordinator(String file, int dc, int id, long ts, long timeOut, long quietTime) {
+	//TODO: check the parameters
+	public NewCoordinator(String file, int dc, int id, long ts, long timeOut, long quietTime,
+			String vascoMemFile) {
 		super(file, dc, Role.COORDINATOR, id);
-		// TOKEN_SIZE = getMembership().getTokenSize();
-		if (TOKEN_SIZE == -1)
-			TOKEN_SIZE = ts;
-		System.out.println("token size: " + TOKEN_SIZE);
 		this.mf = new MessageFactory();
 		records = new Hashtable<ProxyTxnId, TransactionRecord>();
 		long[] dclist = new long[getMembership().getDatacenterCount()];
-		lastCommitted = new LogicalClock(dclist, 0);
-		lastVisible = new LogicalClock(dclist, 0);
-		//objectUpdates = new UpdateTable();
+		lastCommitted = new LogicalClock(dclist);
+		lastVisible = new LogicalClock(dclist);
 		objectUpdates = new UpdateTable(100000);
-		blueCache = new Vector<TransactionRecord>();
-		if (dc == 0) {
-			myBlueTokenBudget = TOKEN_SIZE;
-			blueTokenHold = true;
-			blueTokenReceivedTime = System.nanoTime();
-		}
-		blueTokenExpiredTime = timeOut;
-		blueTxnQuietTime = quietTime;
-		GimmMessageTable = new Hashtable<Integer, Long>();
-		blueTokenGrantAcquired = false;
 		
 		//initiate the txnPool
 		txnPool = new ObjectPool<TransactionRecord>();
@@ -139,104 +109,14 @@ public class NewCoordinator extends BaseNode {
 			TransactionRecord txn = new TransactionRecord();
 			txnPool.addObject(txn);
 		}
-		startWorkingThreads();
-		Debug.println("Coordinator finished initialization and starts");
+		this.setVascoAgent(VascoServiceAgentFactory.createVascoServiceAgent(vascoMemFile, dc));
+		System.out.println("Coordinator finished initialization and starts");
 	}
 
 	AtomicInteger messageCount = new AtomicInteger(0);
 	int messages[] = new int[7];
 	long msgstart = 0;
 	long msgend = 0;
-
-	public void setCoordinatorStart() {
-		synchronized (coordiantorStarted) {
-			coordiantorStarted.notify();
-		}
-	}
-
-	public void startWorkingThreads() {
-		expireBlueTokenThread = new Thread() {
-			public void run() {
-				Debug.println("start a thread to expire blue token\n");
-				synchronized (coordiantorStarted) {
-					try {
-						System.out
-								.println("expire blue token thread waiting for replicationlayer.core.network.ng setting\n");
-						coordiantorStarted.wait();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-				while (true) {
-					//System.out.println("reach blueTokenSynObj expire\n");
-					synchronized (blueTokenSynObj) {
-						//System.out.println("enter blueTokenSynObj expire\n");
-						if (blueTokenHold) {
-							long currentTime = System.nanoTime();
-							if (myBlueTokenBudget == 0
-									||  (currentTime - blueTokenReceivedTime) >= blueTokenExpiredTime) {
-								
-								ProxyTxnId bGrantId = new ProxyTxnId(
-										getMyDatacenterId(), NOTAPROXY, 0);
-								BlueTokenGrantMessage bGrantMsg = new BlueTokenGrantMessage(
-										bGrantId, lastCommitted.getBlueCount());
-								// give up the blueToken here
-								int dataCenterId;
-								synchronized(GimmMessageTable){
-									dataCenterId = getOldestGimmMessage();
-									if (dataCenterId == -1) {
-										//Debug.println("nobody wants the blueToken, I renew myself\n");
-										dataCenterId = getMyDatacenterId();
-										blueTokenGrantAcquired = true;
-									}else{
-										if(GimmMessageTable.get(dataCenterId) != null)
-											GimmMessageTable.remove(dataCenterId);
-										blueTokenGrantAcquired = false;
-									}
-								}
-								blueTokenHold = false;
-								sendToOtherCoordinator(bGrantMsg, dataCenterId);
-								//Debug.println("give blue token to "+ dataCenterId + "\n");
-								myBlueTokenBudget = 0;
-								//System.out.println("blue cache "+blueCache.size());
-								synchronized(blueCache){
-									if(dataCenterId != getMyDatacenterId() && blueCache.size() > 0){
-										GimmeTheBlueMessage gtbm = new GimmeTheBlueMessage(
-												new ProxyTxnId(getMyDatacenterId(), NOTAPROXY, 0),
-												currentBlueEpoch());
-										//Debug.println("I want a blueToken since I don't have\n");
-
-										int dcCount = getMembership().getDatacenterCount();
-										for (int i = 0; i < dcCount; i++) {
-											if (i != getMyDatacenterId()) {
-												System.out.println("send a gimme message to " + i
-														+ "\n");
-												sendToOtherCoordinator(gtbm, i);
-											}
-										}
-										blueTokenGrantAcquired = true;
-									}
-								}
-							}
-						} else {
-							//Debug.println("I can not expire the blueToken since I don't have it\n");
-						}
-					}
-					//clearBlue();
-					try {
-						//Debug.println("I need to wait for expiring another blueToken \n");
-						synchronized (expireBlueTokenWaiting) {
-							expireBlueTokenWaiting.wait(100);
-						}
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		};
-
-		expireBlueTokenThread.start();
-	}
 
 	/***
 	 * handle incoming messages. implements ByteHandler
@@ -260,17 +140,9 @@ public class NewCoordinator extends BaseNode {
 			messages[0]++;
 			process((BeginTxnMessage) msg);
 			return;
-		case MessageTags.GIMMETHEBLUE:
-			messages[1]++;
-			process((GimmeTheBlueMessage) msg);
-			return;
 		case MessageTags.ABORTTXN:
 			messages[2]++;
 			process((AbortTxnMessage) msg);
-			return;
-		case MessageTags.BLUETOKENGRANT:
-			messages[3]++;
-			process((BlueTokenGrantMessage) msg);
 			return;
 		case MessageTags.PROXYCOMMIT:
 			messages[4]++;
@@ -287,61 +159,9 @@ public class NewCoordinator extends BaseNode {
 	}
 
 	/**
-	 * blue token passing scheme
-	 */
-	
-	Object remoteBlueCountSynObj = new Object();
-	private void process(BlueTokenGrantMessage msg) {
-		System.out.println("receive a blue Token from "+ msg.getTxnId().getDatacenterId() + " bluepoch" + msg.getBlueEpoch());
-		// TODO Auto-generated method stub
-		// if I got blueTokenGrant, I need to check whether the blueEpoch I receive is equal to the current blueEpoch I see locally
-		// 
-		synchronized (lastCommittedSynObj){
-			remoteBlueCount = msg.getBlueEpoch();
-			while(msg.getBlueEpoch() != currentBlueEpoch()){
-				System.out.println("blueEpoch differs " + msg.getBlueEpoch() + " " + currentBlueEpoch() );
-				try {
-					lastCommittedSynObj.wait(100);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-			//System.out.println("matching " + msg.getBlueEpoch() + " " + lastBlueClock.getBlueCount() );
-		}
-		
-		synchronized (blueTokenSynObj) {
-			myBlueTokenBudget = TOKEN_SIZE;
-			blueTokenHold = true;
-			blueTokenGrantAcquired = false;
-			blueTokenTryToExpired = false;
-			blueTokenReceivedTime = System.nanoTime();
-			synchronized(GimmMessageTable){
-				if(GimmMessageTable.containsKey(getMyDatacenterId()) == true){
-					GimmMessageTable.remove(getMyDatacenterId());
-				}
-			}
-		}
-		clearBlue();
-	}
-	
-	public synchronized void process(GimmeTheBlueMessage msg) {
-		Debug.println("receive a gimm from " + msg.getTxnId().getDatacenterId() + "\n");
-		synchronized(GimmMessageTable){
-			if (GimmMessageTable.containsKey(msg.getTxnId().getDatacenterId()) == false) {
-				GimmMessageTable.put(msg.getTxnId().getDatacenterId(),
-						System.nanoTime());
-			}
-		}
-		synchronized (expireBlueTokenWaiting) {
-			expireBlueTokenWaiting.notify();
-		}
-	}
-
-	/**
 	 * 
 	 * @param receive a notification from the storage part and notify the proxy and update objectTable
 	 */
-    Object ackObj = new Object();
 	private void process(AckCommitTxnMessage msg) {
 		Debug.println("receive ack commit " + msg);
 		
@@ -350,9 +170,16 @@ public class NewCoordinator extends BaseNode {
 		// insure that one dc doesnt "always win" because another is underloaded
 		setLocalTxn(tmpRec.getFinishTime().getCount());
 		
-		updateObjectTable(tmpRec.getWriteSet().getWriteSet(), tmpRec.getMergeClock(), 
+		if(!(tmpRec.getShadowOp() instanceof DBSifterEmptyShd)){
+			updateObjectTable(tmpRec.getWriteSet().getWriteSet(), tmpRec.getMergeClock(), 
 				tmpRec.getFinishTime(), tmpRec.getTxnId());
+		}
+		//if this txn is conflicting, then we need to clean up
 		
+		if(tmpRec.isConflicting()){
+			Debug.println("Let's clean up this conflicting txn");
+			this.getVascoAgent().cleanUpLocalOperation(tmpRec.getTxnId(), tmpRec.getLcRequest());
+		}
 		statisticOutput(tmpRec);
 		records.remove(tmpRec.getTxnId());
 		Debug.println("reply to proxy " + msg);
@@ -367,17 +194,18 @@ public class NewCoordinator extends BaseNode {
 		txnPool.returnObject(tmpRec);
 		mf.returnAckCommitTxnMessage(msg);
 	}
-	
-	Object checkObj = new Object();
 
 	private void process(ProxyCommitMessage msg) {
 		Debug.println("proxy commit message " + msg);
 		TransactionRecord txn = records.get(msg.getTxnId());
 		txn.setReadWriteSet(msg.getRwset(), 0);
 		txn.setShadowOp(msg.getShadowOperation());
-		txn.setColor(msg.getColor());
 		txn.addStorage(0);
 		txn.setProxyCommitMessage(msg);
+		//generate lock request and isConflicting flag
+		LockRequest lcRequest = this.getVascoAgent().generateLockRequestFromWriteSet(
+				txn.getOpName(), txn.getTxnId(), txn.getWriteSet());
+		txn.setConflicting(!(lcRequest == null));
 		finishTransaction(txn);
 		/*synchronized(checkObj){
 			checkLatency += System.nanoTime() - startTime;
@@ -427,8 +255,9 @@ public class NewCoordinator extends BaseNode {
 		Debug.println("receive a abort txn " + msg);
 		manualAbort++;
 		TransactionRecord tmpRec = records.get(msg.getTxnId());
-		if (tmpRec != null)
+		if (tmpRec != null){
 			abortTxn(records.get(msg.getTxnId()));
+		}
 		else {
 			System.out.println("tried to abort a non-existent transaction! "
 					+ msg);
@@ -456,54 +285,18 @@ public class NewCoordinator extends BaseNode {
 	 * for read coherence; abort if not coherent (4) check for write coherence;
 	 * abort if not coherent (5) attempt to finalize the transaction, if
 	 * finalization fails then try again
+	 * check whether you need to have synchronized keyword here
 	 **/
-	private synchronized void finishTransaction(TransactionRecord tmpRec) {
-		while (true) {
-			if (checkReadWriteCoherence(tmpRec)) {
-				if (finalizeTransaction(tmpRec))
-					break;
-				redoCount++;
-			} else {
-				break;
-			}
-		}
+	private void finishTransaction(TransactionRecord tmpRec) {
+		//acquire the permission here
+		this.getVascoAgent().getPemissions(tmpRec.getTxnId(), tmpRec.getLcRequest());
+		Debug.println("get lock permissions done!");
+		//wait for the permission is matching
+		this.getVascoAgent().waitForBeExecuted(tmpRec.getTxnId(), tmpRec.getLcRequest());
+		Debug.println("start to finalize the transaction");
+		this.finalizeTransaction(tmpRec);
 	}
-
-	Object lastBlueClockSynObj = new Object();
-
-	private boolean checkReadWriteCoherence(TransactionRecord tmpRec) {
-		LogicalClock lbc = tmpRec.getStartClock();
-		ReadSet rs = tmpRec.getReadSet();
-		ReadSetEntry[] rse = rs.getReadSet();
-		for (int i = 0; i < rse.length; i++)
-			lbc = lbc.maxClock(rse[i].getLogicalClock());
-		tmpRec.setSnapshotClock(lbc);
-		// identify the current blue epoch
-		tmpRec.setBlueEpoch(currentBlueEpoch());
-		if(!tmpRec.isBlue()){
-			if(!checkReadCoherence(tmpRec)){
-				redReadAbort++;
-				abortTxn(tmpRec);
-				return false;
-			}
-		}else{
-			if (!checkReadConflicts(tmpRec)) {
-				Debug.println("failed read conflicts " + tmpRec.getTxnId());
-				blueReadAbort++;
-				abortTxn(tmpRec);
-				return false;
-			}
-			if (!checkWriteCoherence(tmpRec)) {
-				Debug.println("failed write coherence " + tmpRec.getTxnId());
-				blueWriteAbort++;
-				abortTxn(tmpRec);
-				return false;
-			}
-		}
-		Debug.println("passed coherence check " + tmpRec.getTxnId());
-		return true;
-	}
-
+	
 	/**
 	 * Finalize the transaction. this function sets the logical clock for the
 	 * merge time. it always completes for red transactions.. Blue transactions
@@ -512,27 +305,51 @@ public class NewCoordinator extends BaseNode {
 	 * 
 	 * a transaction that can be finalized is applied and then commited. if the
 	 * transaction cannot be finalized, then return false.
-	 * 
-	 * synchronized to protect access to the logical clock generation
 	 **/
-	private boolean finalizeTransaction(TransactionRecord tmpRec) {
-
-		if (tmpRec.isRed()) {
-			finalizeRedTransaction(tmpRec);
-			return true;
-		} else if (tmpRec.isBlue()) {
-			int returnValue = finalizeBlueTransaction(tmpRec);
-			if (returnValue == 0) {
-				return false;
-			} else {
-				return true;
+	
+	private void finalizeTransaction(TransactionRecord tmpRec){
+		if (checkReadWriteCoherence(tmpRec)){
+			if(!tmpRec.isConflicting()){
+				this.finalizeNonConflictingTransaction(tmpRec);
+			}else{
+				this.finalizeConflictingTransaction(tmpRec);
 			}
 		}
-		throw new RuntimeException("should not reach here");
 	}
 
-	private void finalizeRedTransaction(TransactionRecord tmpRec) {
-		//System.out.println("\t\t\t\tfinalizeredtransaction start");
+	private boolean checkReadWriteCoherence(TransactionRecord tmpRec) {
+		LogicalClock lbc = tmpRec.getStartClock();
+		ReadSet rs = tmpRec.getReadSet();
+		ReadSetEntry[] rse = rs.getReadSet();
+		for (int i = 0; i < rse.length; i++)
+			lbc = lbc.maxClock(rse[i].getLogicalClock());
+		tmpRec.setSnapshotClock(lbc);
+		if(!tmpRec.isConflicting()){
+			if(!checkReadCoherence(tmpRec)){
+				nonConflictOpReadAbort++;
+				abortTxn(tmpRec);
+				return false;
+			}
+		}else{
+			if (!checkReadConflicts(tmpRec)) {
+				Debug.println("failed read conflicts " + tmpRec.getTxnId());
+				conflictOpReadAbort++;
+				abortTxn(tmpRec);
+				return false;
+			}
+			if (!checkWriteCoherence(tmpRec)) {
+				Debug.println("failed write coherence " + tmpRec.getTxnId());
+				conflictOpWriteAbort++;
+				abortTxn(tmpRec);
+				return false;
+			}
+		}
+		Debug.println("passed coherence check " + tmpRec.getTxnId());
+		return true;
+	}
+
+	private void finalizeNonConflictingTransaction(TransactionRecord tmpRec) {
+		//System.out.println("\t\t\t\tfinalizenonconflictingtransaction start");
         if(tmpRec.isReadonly()){
             //send ackcommit back to proxy
             AckCommitTxnMessage acm = mf.borrowAckCommitTxnMessage();
@@ -552,71 +369,13 @@ public class NewCoordinator extends BaseNode {
         }
 		commitTxn(tmpRec);
 		return;
-
 	}
+	
+	private void finalizeConflictingTransaction(TransactionRecord tmpRec) {
+		//System.out.println("\t\t\t\tfinalizenonconflictingtransaction start");
+		commitTxn(tmpRec);
+		return;
 
-	/*
-	 * finalize a blue transaction return -1: no budget return 0: failed return
-	 * 1: successful
-	 */
-
-	private int finalizeBlueTransaction(TransactionRecord tmpRec) {
-		Debug.println("finalize blue transaction " + tmpRec.getTxnId());
-		synchronized (blueTokenSynObj) {
-			//System.out.println("enter blueTokenSynObj finalizeBlue\n");
-			if (blueTokenHold) {
-				Debug.println("I have token " + myBlueTokenBudget + "\n");
-				if (myBlueTokenBudget > 0) {
-					if (tmpRec.getBlueEpoch() == currentBlueEpoch()) {
-						commitTxn(tmpRec);
-						myBlueTokenBudget--;
-						Debug.println("finalized a blue, budget left "
-								+ myBlueTokenBudget + "\n");
-						return 1;
-					} else {
-						System.out.println("epoch is not matching "
-								+ tmpRec.getBlueEpoch() + " "
-								+ currentBlueEpoch() + "\n");
-						return 0;
-					}
-				} else {
-					if (!blueTokenTryToExpired) {
-						Debug.println("budget used up, please expired it\n");
-						synchronized (expireBlueTokenWaiting) {
-							expireBlueTokenWaiting.notify();
-						}
-						blueTokenTryToExpired = true;
-					}
-				}
-			} else {
-				Debug.println("I don't have token\n");
-				if (!blueTokenGrantAcquired) {
-					// send message to ask the blueToken
-					GimmeTheBlueMessage gtbm = new GimmeTheBlueMessage(
-							new ProxyTxnId(getMyDatacenterId(), NOTAPROXY, 0),
-							currentBlueEpoch());
-					Debug.println("I want a blueToken since I don't have\n");
-
-					int dcCount = this.members.getDatacenterCount();
-					for (int i = 0; i < dcCount; i++) {
-						// TODO:Need to send to all data centers
-						if (i != getMyDatacenterId()) {
-							System.out.println("send a gimme message to " + i
-							+ "\n");
-							sendToOtherCoordinator(gtbm, i);
-						}
-					}
-					blueTokenGrantAcquired = true;
-				}
-			}
-		}
-		//System.out.println("try to get blueCache\n");
-		synchronized (blueCache) {
-			Debug.println("cache new blue txn, some left "
-					+ blueCache.size() + "\n");
-			blueCache.add(tmpRec);
-		}
-		return -1;
 	}
 
 	/**
@@ -694,9 +453,6 @@ public class NewCoordinator extends BaseNode {
 	 **/
 	private boolean checkWriteCoherence(TransactionRecord tmpRec) {
 		Debug.println(" enter into write coherence check " + tmpRec.getTxnId());
-		if (tmpRec.isBlue() == false) {
-			return true;
-		}
 		WriteSet ws = tmpRec.getWriteSet();
 		synchronized (objectUpdates) {
 			for (int j = 0; j < ws.getWriteSet().length; j++) {
@@ -718,6 +474,7 @@ public class NewCoordinator extends BaseNode {
 		}
 	}
 
+	//TODO: if abort an conflicting transaction, you need to clean up with a faked remote commit message
 
 	/**
 	 * abort the transaction. notify proxy and relevant storage servers of the
@@ -732,15 +489,20 @@ public class NewCoordinator extends BaseNode {
 			msg2.encodeMessage(tmpRec.getTxnId(), 0);
 		}
 		sendToProxy(msg2, tmpRec.getTxnId().getProxyId());
-		records.remove(tmpRec.getTxnId());
-		//clean datastructure
-		if(tmpRec.msg != null)
-			mf.returnProxyCommitMessage(tmpRec.msg);
-		mf.returnBeginTxnMessage(tmpRec.bMsg);
-		mf.returnAckTxnMessage(tmpRec.aMsg);
-		mf.returnAckCommitTxnMessage(msg2);
-		tmpRec.reset();
-		txnPool.returnObject(tmpRec);
+		if(tmpRec.isConflicting()){
+			//faked a commit message to both storage and remote
+			this.commitConflictingFakedTxn(tmpRec);
+		}else{
+			records.remove(tmpRec.getTxnId());
+			//clean datastructure
+			if(tmpRec.msg != null)
+				mf.returnProxyCommitMessage(tmpRec.msg);
+			mf.returnBeginTxnMessage(tmpRec.bMsg);
+			mf.returnAckTxnMessage(tmpRec.aMsg);
+			mf.returnAckCommitTxnMessage(msg2);
+			tmpRec.reset();
+			txnPool.returnObject(tmpRec);
+		}
 	}
 
 	/**
@@ -770,16 +532,16 @@ public class NewCoordinator extends BaseNode {
 			remoteCount = 0;
 			remoteStartTime = timeNow;
 
-			System.out.println("redread abort (txn) "+ redReadAbort);
-			System.out.println("blueread abort (txn) "+ blueReadAbort);
-			System.out.println("bluewrite abort (txn) "+blueWriteAbort);
+			System.out.println("non-conflict op read abort (txn) "+ nonConflictOpReadAbort);
+			System.out.println("conflict op read abort (txn) "+ nonConflictOpReadAbort);
+			System.out.println("conflict op write abort (txn) "+nonConflictOpReadAbort);
 			System.out.println("manual abort (txn) "+ manualAbort);
 			System.out.println("redo (txn) " + redoCount);
 			redoCount = 0;
 			manualAbort = 0;
-			redReadAbort = 0;
-			blueReadAbort = 0;
-			blueWriteAbort = 0;
+			nonConflictOpReadAbort = 0;
+			conflictOpReadAbort = 0;
+			conflictOpWriteAbort = 0;
 			System.out
 					.println("global thpt (txn/s) "
 							+ (float) ((float) totalthroughputCount / (float) (timeNow - totalthroughputTime))
@@ -808,10 +570,7 @@ public class NewCoordinator extends BaseNode {
 	Object commitTxnSynObj = new Object();
 	private void commitTxn(TransactionRecord tmpRec) {
 		synchronized(commitTxnSynObj){
-			if(tmpRec.isBlue())
-				tmpRec.setMergeClock(getNextBlueLogicalClock());
-			else
-				tmpRec.setMergeClock(getNextRedLogicalClock());
+			tmpRec.setMergeClock(this.getNextLogicalClock());
 			TimeStamp ns = new TimeStamp(getMyDatacenterId(), nextLocalTxn());
 			tmpRec.setFinishTime(ns);
 		}
@@ -829,44 +588,76 @@ public class NewCoordinator extends BaseNode {
 		RemoteShadowOpMessage rom = mf.borrowRemoteShadowOpMessage();
 		if(rom == null){
 			rom = new RemoteShadowOpMessage(tmpRec.getTxnId(), 
-				tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock(), tmpRec.color, tmpRec.getWriteSet());
+				tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock(), tmpRec.getWriteSet(),
+				tmpRec.getOpName());
 		}else{
 			rom.encodeMessage(tmpRec.getTxnId(), 
-					tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock(), tmpRec.color, tmpRec.getWriteSet());
+					tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock(), tmpRec.getWriteSet(),
+					tmpRec.getOpName());
 		}
 		tmpRec.setRemoteShadowOpMessage(rom);
 		Debug.println("commit to data writer" + csm);
 		
-		sendToStorage(csm, 0); //TODO: fix to more generic
+		sendToStorage(csm, 0);
 		//send to remote site
 		
 		Debug.println("send to remote data centers " + rom);
 		sendToOtherRemoteCoordinator(rom);
 	}
+	
+	/**
+	 * When a conflicting transaction is about to abort, we cannot simply ignore it
+	 * since it already acquires locks, then I need to mimic its commit but without
+	 * actually executing it.
+	 * @param tmpRec
+	 */
+	private void commitConflictingFakedTxn(TransactionRecord tmpRec) {
+		Debug.println("Commit a conflicting abort transaction");
+		synchronized(commitTxnSynObj){
+			tmpRec.setMergeClock(this.getNextLogicalClock());
+			TimeStamp ns = new TimeStamp(getMyDatacenterId(), nextLocalTxn());
+			tmpRec.setFinishTime(ns);
+		}
+		
+		DBSifterEmptyShd op = null;
+		try {
+			op = DBSifterEmptyShd.createOperation();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		tmpRec.setShadowOp(op);
+		//commit to data writer
+		CommitShadowOpMessage csm = mf.borrowCommitShadowOpMessage();
+		if(csm == null){
+			csm = new CommitShadowOpMessage(tmpRec.getTxnId(), 
+					tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock());
+		}else{
+			csm.encodeMessage(tmpRec.getTxnId(), 
+					tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock());
+		}
+		tmpRec.setCommitShadowOpMessage(csm);
+		
+		RemoteShadowOpMessage rom = mf.borrowRemoteShadowOpMessage();
+		if(rom == null){
+			rom = new RemoteShadowOpMessage(tmpRec.getTxnId(), 
+				tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock(), tmpRec.getWriteSet(),
+				tmpRec.getOpName());
+		}else{
+			rom.encodeMessage(tmpRec.getTxnId(), 
+					tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock(), tmpRec.getWriteSet(),
+					tmpRec.getOpName());
+		}
+		tmpRec.setRemoteShadowOpMessage(rom);
+		Debug.println("commit ConflictingFaked to data writer" + csm);
+		
+		sendToStorage(csm, 0);
+		//send to remote site
+		
+		Debug.println("send ConflictingFaked to remote data centers " + rom);
+		sendToOtherRemoteCoordinator(rom);
+	}
 
 	long commitStartTime = System.nanoTime();
-
-	private void clearBlue() {
-		Vector<TransactionRecord> tmp = null;
-		//System.out.println("reach blueCacheSynObj clearBlue\n");
-		synchronized(blueCache){
-			//System.out.println("enter blueCacheSynObj clearBlue\n");
-			tmp = blueCache;
-			blueCache = new Vector<TransactionRecord>();
-		}
-		//System.out.println("clear blue list items " + tmp.size() + "\n");
-		while (tmp.size() != 0) {
-
-			TransactionRecord first = tmp.elementAt(0);
-			//System.out.println("attempting to commit: " + first);
-			tmp.remove(first);
-			Debug.println("purging: " + first.getTxnId());
-			// check the read-write coherence again
-			finishTransaction(first);
-		}
-		//System.out.println("after clean bluecache: "+blueCache.size());
-
-	}
 
 	// //////////// maintaining timestamps and counts
 	Object txnCountLock = new String();
@@ -894,44 +685,17 @@ public class NewCoordinator extends BaseNode {
 			return lastCommitted;
 		}
 	}
-
-	private long currentBlueEpoch() {
-		synchronized (lastCommittedSynObj) {
-			return lastCommitted.getBlueCount();
-		}
-	}
 	
-	public void updateLastCommittedLogicalClock(LogicalClock lc, boolean isNotified){
+	public void updateLastCommittedLogicalClock(LogicalClock lc){
 		synchronized(lastCommittedSynObj){
 			LogicalClock tmpLc = lastCommitted.maxClock(lc);
 			lastCommitted = tmpLc;
-			if(isNotified){
-				if(remoteBlueCount == lastCommitted.getBlueCount()){
-					lastCommittedSynObj.notify();
-				}
-			}
 		}
 	}
-
-	/**
-	 * 
-	 * @increase the logical clock
-	 */
 	
-	private LogicalClock getNextRedLogicalClock(){
-		return getNextLogicalClock(false);
-	}
-	
-	private LogicalClock getNextBlueLogicalClock(){
-		return getNextLogicalClock(true);
-	}
-	
-	private LogicalClock getNextLogicalClock(boolean blue){
+	private LogicalClock getNextLogicalClock(){
 		synchronized (lastCommittedSynObj) {
 			lastCommitted.increment(getMyDatacenterId());
-			if (blue) {
-				lastCommitted.incrementBlue();
-			}
 			return lastCommitted.copy();
 		}
 	}
@@ -946,36 +710,6 @@ public class NewCoordinator extends BaseNode {
 		synchronized(lastVisible){
 			return lastVisible.copy();
 		}
-	}
-
-
-	public int getOldestGimmMessage() {
-		int nextDcId = (getMyDatacenterId() + 1)%getDatacenterCount();
-		/*if(GimmMessageTable.get(nextDcId) != null){
-			return nextDcId;
-		}
-		
-		Set<Entry<Integer, Long>> s = GimmMessageTable.entrySet();
-		Iterator<Entry<Integer, Long>> it = s.iterator();
-		int count = 0;
-		long smallestTime = 0;
-		int dcId = -1;
-		while (it.hasNext()) {
-			Entry<Integer, Long> e = it.next();
-			if (count == 0) {
-				smallestTime = e.getValue();
-				dcId = e.getKey().intValue();
-				count = 1;
-			} else {
-				if (smallestTime > e.getValue()) {
-					smallestTime = e.getValue();
-					dcId = e.getKey().intValue();
-				}
-			}
-
-		}
-		return dcId;*/
-		return nextDcId;
 	}
 	
 	public void updateObjectTable(WriteSetEntry wse[], LogicalClock lc, TimeStamp ts, ProxyTxnId txnId){
@@ -997,17 +731,26 @@ public class NewCoordinator extends BaseNode {
 			} 
 		}
 	}
+	
+	public VascoServiceAgent getVascoAgent() {
+		return vascoAgent;
+	}
+
+
+	public void setVascoAgent(VascoServiceAgent vascoAgent) {
+		this.vascoAgent = vascoAgent;
+	}
 
 	public static void main(String arg[]) {
-		if (arg.length != 9) {
+		if (arg.length != 10) {
 			System.out
-					.println("usage: Coordinator config.xml dcId coordinatorId threadCount tokensize tcpnodelay blueTimeOut bluequiteTime writeRate");
+					.println("usage: Coordinator config.xml dcId coordinatorId threadCount tokensize tcpnodelay blueTimeOut bluequiteTime writeRate vascoMemFile");
 			System.exit(0);
 		}
 
 		NewCoordinator imp = new NewCoordinator(arg[0],
 				Integer.parseInt(arg[1]), Integer.parseInt(arg[2]),
-				Long.parseLong(arg[4]), Long.parseLong(arg[6]), Long.parseLong(arg[7]));
+				Long.parseLong(arg[4]), Long.parseLong(arg[6]), Long.parseLong(arg[7]), arg[9]);
 
 		boolean tcpDelay = Boolean.parseBoolean(arg[5]);
 
@@ -1038,8 +781,6 @@ public class NewCoordinator extends BaseNode {
 
 		NettyTCPReceiver rcv = new NettyTCPReceiver(imp.getMembership().getMe()
 				.getInetSocketAddress(), ptnq, localThreadCount);
-
-		imp.setCoordinatorStart();
 		
 		if(imp.getMembership().getDatacenterCount()>1){
 			RemoteCoordinator rCoord = new RemoteCoordinator(arg[0],

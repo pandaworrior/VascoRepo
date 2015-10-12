@@ -66,7 +66,7 @@ public class Test1
 			Debug.println( "complete = " + rwset);
 			
 			long []dcs = { 1, 2};
-			LogicalClock lc = new LogicalClock( dcs, 1);
+			LogicalClock lc = new LogicalClock( dcs);
 			TimeStamp ts = new TimeStamp( 1, n);
 			
 			db.commit( lc, ts);
