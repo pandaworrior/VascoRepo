@@ -246,7 +246,7 @@ public class ClosedLoopProxy extends BaseNode implements ClosedLoopProxyInterfac
 	 */
 	
 	public boolean commit(ProxyTxnId txn) {
-		return true;
+		throw new RuntimeException("commit in ClosedLoopProxy has not been implemented");
 	}
 	
 	Object txnNumObj = new Object();

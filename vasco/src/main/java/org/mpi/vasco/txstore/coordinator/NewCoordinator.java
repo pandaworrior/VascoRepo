@@ -92,9 +92,7 @@ public class NewCoordinator extends BaseNode {
 	//objects for vasco coordination service
 	VascoServiceAgent vascoAgent;
 
-	//TODO: check the parameters
-	public NewCoordinator(String file, int dc, int id, long ts, long timeOut, long quietTime,
-			String vascoMemFile) {
+	public NewCoordinator(String file, int dc, int id, String vascoMemFile) {
 		super(file, dc, Role.COORDINATOR, id);
 		this.mf = new MessageFactory();
 		records = new Hashtable<ProxyTxnId, TransactionRecord>();
@@ -742,17 +740,14 @@ public class NewCoordinator extends BaseNode {
 	}
 
 	public static void main(String arg[]) {
-		if (arg.length != 10) {
+		if (arg.length != 6) {
 			System.out
-					.println("usage: Coordinator config.xml dcId coordinatorId threadCount tokensize tcpnodelay blueTimeOut bluequiteTime writeRate vascoMemFile");
+					.println("usage: Coordinator config.xml dcId coordinatorId threadCount writeRate vascoMemFile");
 			System.exit(0);
 		}
 
 		NewCoordinator imp = new NewCoordinator(arg[0],
-				Integer.parseInt(arg[1]), Integer.parseInt(arg[2]),
-				Long.parseLong(arg[4]), Long.parseLong(arg[6]), Long.parseLong(arg[7]), arg[9]);
-
-		boolean tcpDelay = Boolean.parseBoolean(arg[5]);
+				Integer.parseInt(arg[1]), Integer.parseInt(arg[2]), arg[5]);
 
 		// set up the replicationlayer.core.network.ng for outgoing messages
 		NettyTCPSender sendNet = new NettyTCPSender();
@@ -762,7 +757,7 @@ public class NewCoordinator extends BaseNode {
 		// set up the replicationlayer.core.network.ng for incoming messages
 		// first, create the pipe from the replicationlayer.core.network.to the coordinator
 		int threadcount = Integer.parseInt(arg[3]);
-		double writeRate = Double.parseDouble(arg[8]);
+		double writeRate = Double.parseDouble(arg[4]);
 		int dcCount = imp.getDatacenterCount();
 		int localThreadCount = 0;
 		int remoteThreadCount = 0;
@@ -776,8 +771,6 @@ public class NewCoordinator extends BaseNode {
 		System.out.println("local thread count " + localThreadCount + " remote thread count " + remoteThreadCount);
 		ParallelPassThroughNetworkQueue ptnq = new ParallelPassThroughNetworkQueue(
 				imp, localThreadCount);
-		// then create the actual network
-		// PassThroughNetworkQueue ptnq = new PassThroughNetworkQueue(imp);
 
 		NettyTCPReceiver rcv = new NettyTCPReceiver(imp.getMembership().getMe()
 				.getInetSocketAddress(), ptnq, localThreadCount);

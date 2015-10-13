@@ -1,3 +1,7 @@
+/*
+ * This class is doing x;
+ * Created by @Creator on @Date
+ */
 package org.mpi.vasco.coordination;
 
 import java.util.HashMap;
@@ -28,20 +32,36 @@ import org.mpi.vasco.util.debug.PerProfile;
 //:TODO: think about how to recycle the used messages, since some components of
 // messaages like lockreply or lockrequest are continiously used by the other parts of code
 
+/**
+ * The Class MessageHandlerClientSide.
+ */
 public class MessageHandlerClientSide extends BaseNode{
 
+	/** The Constant serialVersionUID. */
 	private static final long serialVersionUID = -4040510651915229397L;
 	
+	/** The mf. */
 	private MessageFactory mf;
 	
+	/** The agent. */
 	private VascoServiceAgent agent;
 
+	/**
+	 * Instantiates a new message handler client side.
+	 *
+	 * @param membershipFile the membership file
+	 * @param myRole the my role
+	 * @param myId the my id
+	 */
 	public MessageHandlerClientSide(String membershipFile, Role myRole, int myId) {
 		super(membershipFile, myRole, myId);
 		mf = new MessageFactory();
 		Debug.printf("Set up lock client %d for lock server", myId);
 	}
 
+	/* (non-Javadoc)
+	 * @see org.mpi.vasco.network.ByteHandler#handle(byte[])
+	 */
 	@Override
 	public void handle(byte[] bytes) {
 		MessageBase msg = mf.fromBytes(bytes);
@@ -68,6 +88,11 @@ public class MessageHandlerClientSide extends BaseNode{
 		
 	}
 
+	/**
+	 * Process.
+	 *
+	 * @param msg the msg
+	 */
 	private void process(LockRepMessage msg) {
 		Debug.printf("Receive a lock reply message from server or client content %s \n", msg.toString());
 		LockReply lcReply = msg.getLockRly();
@@ -82,6 +107,11 @@ public class MessageHandlerClientSide extends BaseNode{
 		
 	}
 	
+	/**
+	 * Process.
+	 *
+	 * @param msg the msg
+	 */
 	private void process(LockReqMessage msg){
 		Debug.printf("Receive a lock request message from client content %s \n", msg.toString());
 		Protocol p = this.getAgent().getProtocol(Protocol.PROTOCOL_ASYM);
@@ -97,6 +127,11 @@ public class MessageHandlerClientSide extends BaseNode{
 		//mf.returnLockRepMessage(repMsg);
 	}
 	
+	/**
+	 * Process.
+	 *
+	 * @param msg the msg
+	 */
 	private void process(CleanUpBarrierMessage msg){
 		Debug.printf("Receive a clean up barrier message from client content %s\n", msg.toString());
 		Protocol p = this.getAgent().getProtocol(Protocol.PROTOCOL_ASYM);
@@ -108,6 +143,9 @@ public class MessageHandlerClientSide extends BaseNode{
 		p.cleanUpLocal(msg.getProxyTxnId(), lcr.getKeyList(), lcr.getOpName());
 	}
 
+	/* (non-Javadoc)
+	 * @see org.mpi.vasco.coordination.BaseNode#setUp()
+	 */
 	@Override
 	public void setUp() {
 		// set up for outgoing messages
@@ -124,6 +162,11 @@ public class MessageHandlerClientSide extends BaseNode{
 	}
 	
 	//for testing the functionalities
+	/**
+	 * Send messages.
+	 *
+	 * @param n the n
+	 */
 	public void sendMessages(int n){
 		for(int i = 0; i < n; i++){
 			LockRequest lR = new LockRequest("a");//bit flip to a or b
@@ -134,8 +177,12 @@ public class MessageHandlerClientSide extends BaseNode{
 		}
 	}
 	
+	/** The counter per client. */
 	static int counterPerClient = 0;
 	
+	/**
+	 * Send test sym request message.
+	 */
 	public void sendTestSymRequestMessage(){
 		PerProfile.startMeasure();
 		Debug.println("Send a test sym request message to server\n");
@@ -156,6 +203,11 @@ public class MessageHandlerClientSide extends BaseNode{
 		PerProfile.endMeasure();
 	}
 	
+	/**
+	 * Send test sym request message in batch.
+	 *
+	 * @param batchSize the batch size
+	 */
 	public void sendTestSymRequestMessageInBatch(int batchSize){
 		if(batchSize <= 0){
 			throw new RuntimeException("batch size must be positive");
@@ -166,6 +218,9 @@ public class MessageHandlerClientSide extends BaseNode{
 		}
 	}
 	
+	/**
+	 * Send test a sym request message.
+	 */
 	public void sendTestASymRequestMessage(){
 		PerProfile.startMeasure();
 		String opName = this.getAgent().getConfTable().getRandomConflictOpNameByType(Protocol.PROTOCOL_ASYM);
@@ -187,6 +242,11 @@ public class MessageHandlerClientSide extends BaseNode{
 		this.getAgent().cleanUpLocalOperation(txnId, lr);
 	}
 	
+	/**
+	 * Send test a sym request message in batch.
+	 *
+	 * @param batchSize the batch size
+	 */
 	public void sendTestASymRequestMessageInBatch(int batchSize){
 		if(batchSize <= 0){
 			throw new RuntimeException("batch size must be positive");
@@ -197,6 +257,9 @@ public class MessageHandlerClientSide extends BaseNode{
 		}
 	}
 	
+	/**
+	 * Test.
+	 */
 	public void test(){
 		System.out.println("Test the client and server");
 		Scanner keyboard = new Scanner(System.in);
@@ -232,6 +295,11 @@ public class MessageHandlerClientSide extends BaseNode{
 		}
 	}
 	
+	/**
+	 * The main method.
+	 *
+	 * @param args the arguments
+	 */
 	public static void main(String[] args){
 		if(args.length != 2){
 			System.out.println("MessageHandlerServerSide [memshipFile] [id]");
@@ -257,10 +325,20 @@ public class MessageHandlerClientSide extends BaseNode{
 		mClient.test();
 	}
 
+	/**
+	 * Gets the agent.
+	 *
+	 * @return the agent
+	 */
 	public VascoServiceAgent getAgent() {
 		return agent;
 	}
 
+	/**
+	 * Sets the agent.
+	 *
+	 * @param agent the new agent
+	 */
 	public void setAgent(VascoServiceAgent agent) {
 		this.agent = agent;
 	}
