@@ -3,7 +3,10 @@ package org.mpi.vasco.txstore.coordinator;
 import org.mpi.vasco.util.debug.Debug;
 
 import org.mpi.vasco.txstore.util.LogicalClock;
+import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.txstore.util.TimeStamp;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 import java.util.Hashtable;
 import java.util.Vector;
@@ -26,8 +29,30 @@ public class UpdateTable {
 			table.put(objectId, uE);
 		}
 		else{
-			if(v.lc.precedes(uE.lc) || v.ts.precedes(uE.ts))
-				table.put(objectId, uE);
+			if((v.lc == null && v.ts == null) || v.lc.precedes(uE.lc) || v.ts.precedes(uE.ts)){
+				//table.put(objectId, uE);
+				v.lc = uE.lc;
+				v.ts = uE.ts;
+			}
+		}
+	}
+	
+	/*
+	 * need to clean up the lock list
+	 */
+	public void addUpdateTime(String objectId, updateEntry uE, ProxyTxnId txnId) {
+		updateEntry  v = table.get(objectId);
+		if (v == null){
+			v = uE;
+			table.put(objectId, v);
+		}
+		else{
+			if((v.lc == null && v.ts == null) || v.lc.precedes(uE.lc) || v.ts.precedes(uE.ts)){
+				//table.put(objectId, uE);
+				v.lc = uE.lc;
+				v.ts = uE.ts;
+			}
+			v.lockTable.remove(txnId);
 		}
 	}
 
@@ -79,21 +104,51 @@ class updateEntry {
 	LogicalClock lc;
 	TimeStamp ts;
 	boolean isdeleted = false;
+	
+	//need to have a lock lists, each entry represents a transaction
+	Object2ObjectOpenHashMap<ProxyTxnId, Boolean> lockTable;
+	
 	updateEntry(LogicalClock l, TimeStamp t, boolean isD){
 		lc = l;
 		ts = t;
 		isdeleted = isD;
+		lockTable = new Object2ObjectOpenHashMap<ProxyTxnId, Boolean>();
 	}
 	
 	public boolean precedes(updateEntry uE){
-		if (lc.precedes(uE.lc))
+		if((this.lc == null && this.ts == null) ||
+				lc.precedes(uE.lc) ||
+				ts.precedes(uE.ts)){
 			return true;
-		if(ts.precedes(uE.ts))
-			return true;
+		}
 		return false;
 	}
 	
 	public boolean isDeleted(){
 		return isdeleted;
+	}
+	
+	public void lock(ProxyTxnId txnId){
+		synchronized(this.lockTable){
+			this.lockTable.put(txnId, true);
+		}
+	}
+	
+	public void unlock(ProxyTxnId txnId){
+		synchronized(this.lockTable){
+			this.lockTable.remove(txnId);
+		}
+	}
+	
+	public boolean isLockedByOtherTransaction(ProxyTxnId txnId){
+		synchronized(this.lockTable){
+			//if there are more than 1 transactions that lock the item, then true
+			//if there is only one transaction, but it is not the current one, then true
+			if((this.lockTable.size() > 1) || 
+					(this.lockTable.size() == 1 && !this.lockTable.containsKey(txnId))){
+				return true;
+			}
+		}
+		return false;
 	}
 }

@@ -14,6 +14,7 @@ import org.mpi.vasco.txstore.messages.RemoteShadowOpMessage;
 import org.mpi.vasco.txstore.scratchpad.rdbms.util.DBSifterEmptyShd;
 // sending messages
 import org.mpi.vasco.txstore.util.ProxyTxnId;
+import org.mpi.vasco.txstore.util.WriteSetEntry;
 import org.mpi.vasco.util.ObjectPool;
 import org.mpi.vasco.util.debug.Debug;
 
@@ -81,7 +82,6 @@ public class RemoteCoordinator extends BaseNode {
 	}
 
 	private void process(AckCommitTxnMessage msg) {
-		// TODO Auto-generated method stub
 		Debug.println("receive ack commit " + msg);
 		
 		TransactionRecord tmpRec = records.get(msg.getTxnId());
@@ -111,7 +111,6 @@ public class RemoteCoordinator extends BaseNode {
 	}
 
 	private void process(RemoteShadowOpMessage msg) {
-		// TODO Auto-generated method stub
 		Debug.println("receive remote shadow " + msg);
 		TransactionRecord txn  = txnPool.borrowObject();
 		if(txn == null){
@@ -127,6 +126,24 @@ public class RemoteCoordinator extends BaseNode {
 		txn.setRemote();
 		txn.addStorage(0);
 		txn.setRemoteShadowOpMessage(msg);
+		
+		//lock writeset here for making local transactions be aware of its existence
+		WriteSetEntry[] wsEntries = txn.getWriteSet().getWriteSet();
+		int numOfWriteEntries = wsEntries.length;
+		synchronized (coord.objectUpdates) {
+			//first lock all write entries
+			for(int i = 0; i < numOfWriteEntries; i++){
+				WriteSetEntry wsE = wsEntries[i];
+				updateEntry u = coord.objectUpdates.getUpdates(wsE
+						.getObjectId());
+				if(u == null){
+					Debug.println("Object not exists, add its record " + wsE.getObjectId());
+					u = new updateEntry(null, null, false);
+					coord.objectUpdates.addUpdateTime(wsE.getObjectId(), u);
+				}
+				u.lock(txn.getTxnId());
+			}
+		}
 		
 		CommitShadowOpMessage csm = mf.borrowCommitShadowOpMessage();
 		if(csm == null){

@@ -251,13 +251,19 @@ public class TransactionRecord{
 	mergeClock = lc;
     }
 
+    /*
+     * not right, so depreciated now
+     */
+    /*
     public LogicalClock getSnapshotClock(){
 	return snapshotClock;
     }
+    */
     
     /** set the snapshot clock based on the start time, the read times,
 	and the last blue clock provided by the coordinator
     **/
+    /*
     public void setSnapshotClock(LogicalClock lbc){
 //        System.out.println("\t\t^^^^^^setsnapshot start");
 	LogicalClock tmp = getStartClock();
@@ -271,7 +277,7 @@ public class TransactionRecord{
 	}
 	snapshotClock = tmp;
   //      System.out.println("\t\t^^^^^^setsnapshot end");
-    }
+    }*/
 
      
     public Lock writeLock() {

@@ -139,6 +139,12 @@
 				<addClasspath>true</addClasspath>
 			</manifest>
 		</archive>
+		<archive>
+			<manifest>
+				<mainClass>org.mpi.vasco.coordination.protocols.centr.MessageHandlerServerSide</mainClass>
+				<addClasspath>true</addClasspath>
+			</manifest>
+		</archive>
 	</configuration>
   </plugin>
 	<plugin>

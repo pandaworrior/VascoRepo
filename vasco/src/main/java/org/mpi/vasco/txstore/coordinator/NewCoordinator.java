@@ -316,32 +316,28 @@ public class NewCoordinator extends BaseNode {
 	}
 
 	private boolean checkReadWriteCoherence(TransactionRecord tmpRec) {
-		LogicalClock lbc = tmpRec.getStartClock();
-		ReadSet rs = tmpRec.getReadSet();
-		ReadSetEntry[] rse = rs.getReadSet();
-		for (int i = 0; i < rse.length; i++)
-			lbc = lbc.maxClock(rse[i].getLogicalClock());
-		tmpRec.setSnapshotClock(lbc);
+		
 		if(!tmpRec.isConflicting()){
 			if(!checkReadCoherence(tmpRec)){
-				nonConflictOpReadAbort++;
 				abortTxn(tmpRec);
+				nonConflictOpReadAbort++;
 				return false;
 			}
 		}else{
-			if (!checkReadConflicts(tmpRec)) {
-				Debug.println("failed read conflicts " + tmpRec.getTxnId());
+			if(!checkReadCoherence(tmpRec)){
+				abortTxn(tmpRec);
 				conflictOpReadAbort++;
-				abortTxn(tmpRec);
 				return false;
-			}
-			if (!checkWriteCoherence(tmpRec)) {
-				Debug.println("failed write coherence " + tmpRec.getTxnId());
-				conflictOpWriteAbort++;
-				abortTxn(tmpRec);
-				return false;
+			}else{
+				//lock all write sets plus
+				if(!checkReadWriteConflicts(tmpRec)){
+					abortTxn(tmpRec);
+					conflictOpWriteAbort++;
+					return false;
+				}
 			}
 		}
+		
 		Debug.println("passed coherence check " + tmpRec.getTxnId());
 		return true;
 	}
@@ -379,7 +375,7 @@ public class NewCoordinator extends BaseNode {
 	/**
 	 * Check read coherence of the transaction. ensure that there are no reads
 	 * that should have returned a value updated (or merged) between the time of
-	 * the read value and the snapshot time itself.
+	 * the read value and the snapshot time itself. read most recent version before the begin timestamp
 	 * 
 	 * this checks that we have read a coherent snapshot
 	 **/
@@ -392,19 +388,25 @@ public class NewCoordinator extends BaseNode {
 				updateEntry u = objectUpdates.getUpdates(rse
 						.getObjectId());
 				if( u != null && (u.isDeleted() == false)){
-					if (u.lc.precedes(tmpRec.getSnapshotClock())
-							&& ( !u.lc.precedes(rse.getLogicalClock()))){
-						 System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
-						 rse.getObjectId()); System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
-						 System.out.println("snapshot clock: " +
-						 tmpRec.getSnapshotClock());
-						 System.out.println("read entry: " +
-						 rse.getLogicalClock()); System.out
-						 .println("u precedes ss: " +
-						 u.lc.precedes(tmpRec .getSnapshotClock()));
-						 System.out.println("u not precedes RE: " +
-						 !u.lc.precedes(rse.getLogicalClock()));
+					if(!rse.getLogicalClock().precedes(tmpRec.getStartClock())){
+						//read a value modified after the begin timestamp
+						System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
+								 rse.getObjectId());
+						System.out.println("read entry: " + rse.getLogicalClock().toString() + " not precedes beginTime :" +
+								 tmpRec.getStartClock().toString());
 						return false;
+					}else{
+						if (u.lc.precedes(tmpRec.getStartClock())
+								&& ( !u.lc.precedes(rse.getLogicalClock()))){
+							//read a value, it has been modified between its timestamp and the begin time
+							//this means that it is not from the most recent version
+							System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
+									 rse.getObjectId());
+							System.out.println("update to: " + u.lc.toString() + " precedes beginTime :" +
+									 tmpRec.getStartClock().toString());
+							System.out.println("but not precede the read entry: " + rse.getLogicalClock().toString());
+							return false;
+						}
 					}
 				}
 			}
@@ -419,60 +421,46 @@ public class NewCoordinator extends BaseNode {
 	 * 
 	 * this checks that we have read a coherent snapshot
 	 **/
-	private boolean checkReadConflicts(TransactionRecord tmpRec) {
+	private boolean checkReadWriteConflicts(TransactionRecord tmpRec) {
 		Debug.println(" enter read conflicts check " + tmpRec.getTxnId());
-		ReadSet rs = tmpRec.getReadSet();
+		ReadSetEntry[] rsEntries = tmpRec.getReadSet().getReadSet();
+		WriteSetEntry[] wsEntries = tmpRec.getWriteSet().getWriteSet();
+		int numOfReadEntries = rsEntries.length;
+		int numOfWriteEntries = wsEntries.length;
 		synchronized (objectUpdates) {
-			for (int i = 0; i < rs.getReadSet().length; i++) {
-				ReadSetEntry rse = rs.getReadSet()[i];
-				updateEntry u = objectUpdates.getUpdates(rse
+			//first lock all write entries
+			for(int i = 0; i < numOfWriteEntries; i++){
+				WriteSetEntry wsE = wsEntries[i];
+				updateEntry u = objectUpdates.getUpdates(wsE
 						.getObjectId());
-				if(u!=null && (u.isDeleted() == false)){
-				if(!u.lc.precedes(rse.getLogicalClock())){
-						 System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
-						 rse.getObjectId()); System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
-						 System.out.println("read entry: " +
-						 rse.getLogicalClock()); 
-						 System.out.println("u not precedes RE: " +
-						 !u.lc.precedes(rse.getLogicalClock()));
-						return false;
-					}
+				if(u == null){
+					Debug.println("Object not exists, add its record " + wsE.getObjectId());
+					u = new updateEntry(null, null, false);
+					this.objectUpdates.addUpdateTime(wsE.getObjectId(), u);
+				}
+				u.lock(tmpRec.getTxnId());
+			}
+			
+			//validate if read sets not conflicting with other concurrent transactions
+			for(int i = 0; i < numOfReadEntries; i++){
+				ReadSetEntry rsE = rsEntries[i];
+				updateEntry u = objectUpdates.getUpdates(rsE
+						.getObjectId());
+				if((u.isLockedByOtherTransaction(tmpRec.getTxnId())) || 
+						(!u.lc.precedes(rsE.getLogicalClock()))){
+					 System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
+							 rsE.getObjectId()); System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
+					 System.out.println("read entry: " +
+							 rsE.getLogicalClock()); 
+					 System.out.println("u not precedes RE: " +
+					 !u.lc.precedes(rsE.getLogicalClock()));
+					return false;
 				}
 			}
+			
 			return true;
 		}
 	}
-
-	/**
-	 * check that the writes are coherent. specifically that there are no blue
-	 * updates that have been superceded by more recents updates.
-	 * 
-	 * NOTE: this may be unnecessarily since blues are serialized anyway.
-	 **/
-	private boolean checkWriteCoherence(TransactionRecord tmpRec) {
-		Debug.println(" enter into write coherence check " + tmpRec.getTxnId());
-		WriteSet ws = tmpRec.getWriteSet();
-		synchronized (objectUpdates) {
-			for (int j = 0; j < ws.getWriteSet().length; j++) {
-				WriteSetEntry rs = ws.getWriteSet()[j];
-				updateEntry updates = objectUpdates.getUpdates(rs
-							.getObjectId());
-					if(updates != null){
-						if (!updates.lc.precedes(tmpRec.getSnapshotClock())) {
-							System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
-									 rs.getObjectId()); 
-							System.out.println("update to the object: " + updates.lc + " " + updates.ts.toLong());
-							System.out.println("snapshot clock: " +
-									 tmpRec.getSnapshotClock());
-							return false;
-					}
-				}
-			}
-			return true;
-		}
-	}
-
-	//TODO: if abort an conflicting transaction, you need to clean up with a faked remote commit message
 
 	/**
 	 * abort the transaction. notify proxy and relevant storage servers of the
@@ -710,19 +698,21 @@ public class NewCoordinator extends BaseNode {
 		}
 	}
 	
-	public void updateObjectTable(WriteSetEntry wse[], LogicalClock lc, TimeStamp ts, ProxyTxnId txnId){
+	//check this
+	public void updateObjectTable(WriteSetEntry wse[], LogicalClock lc, TimeStamp ts, 
+			ProxyTxnId txnId){
 		synchronized (objectUpdates) {
 			for (int j = 0; j < wse.length; j++) {
 				if(wse[j].isDeleted()){
 					objectUpdates.addUpdateTime(wse[j].getObjectId(),
-							new updateEntry(lc, ts, true));
+							new updateEntry(lc, ts, true), txnId);
 					Debug.println("delete object id: " +
 							 wse[j].getObjectId() + " mergedClock: " +
 							 lc + " timestamp: " + ts +  " txnid " + txnId);
 					continue;
 				}
 				objectUpdates.addUpdateTime(wse[j].getObjectId(),
-						new updateEntry(lc, ts, false));
+						new updateEntry(lc, ts, false), txnId);
 				 Debug.println("update object id: " +
 				 wse[j].getObjectId() + " mergedClock: " +
 				 lc + " timestamp: " + ts +  " txnid " + txnId);
