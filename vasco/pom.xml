@@ -141,7 +141,7 @@
 		</archive>
 		<archive>
 			<manifest>
-				<mainClass>org.mpi.vasco.coordination.protocols.centr.MessageHandlerServerSide</mainClass>
+				<mainClass>org.mpi.vasco.coordination.protocols.centr.ReplicatedLockService</mainClass>
 				<addClasspath>true</addClasspath>
 			</manifest>
 		</archive>
@@ -168,7 +168,7 @@
 <pluginRepositories>
         <pluginRepository>
     <id>onejar-maven-plugin.googlecode.com</id>
-    <url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo-snapshot</url>
+    <url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo/</url>
 </pluginRepository>
     </pluginRepositories>
 </project>

@@ -153,7 +153,7 @@ public class ReplicatedLockService {
     }
 
     private static void help() {
-        System.out.println("CounterServiceDemo [raftfile] [raftname] " +
+        System.out.println("ReplicatedLockService [raftfile] [raftname] " +
                              "[timeout] [follower(true or false)] [serverclientxmlfile] [myId]");
     }
 
