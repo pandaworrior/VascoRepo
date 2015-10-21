@@ -112,6 +112,13 @@
         <scope>system</scope>
         <systemPath>${project.basedir}/lib/leveldbjni-all-1.8.jar</systemPath>
     </dependency>
+    <dependency>
+    	<groupId>mysql-connector-java</groupId>
+    	<artifactId>mysql-connector-java</artifactId>
+    	<version>5.1.17</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/lib/mysql-connector-java-5.1.17-bin.jar</systemPath>
+    </dependency>
   </dependencies>
   <build>
   <plugins>
