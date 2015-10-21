@@ -98,6 +98,20 @@
         <scope>system</scope>
         <systemPath>${project.basedir}/lib/fastutil-7.0.6.jar</systemPath>
     </dependency>
+    <dependency>
+    	<groupId>jgroups</groupId>
+    	<artifactId>jgroups</artifactId>
+    	<version>3.6.3</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/lib/jgroups-3.6.3.Final.jar</systemPath>
+    </dependency>
+        <dependency>
+    	<groupId>leveldbjni</groupId>
+    	<artifactId>leveldbjni</artifactId>
+    	<version>1.8</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/lib/leveldbjni-all-1.8.jar</systemPath>
+    </dependency>
   </dependencies>
   <build>
   <plugins>
