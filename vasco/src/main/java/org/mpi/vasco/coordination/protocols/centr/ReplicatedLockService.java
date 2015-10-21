@@ -44,6 +44,7 @@ public class ReplicatedLockService {
         server_for_clients = new MessageHandlerServerSide(xmlFile, Role.LOCKSERVER, myId);
         server_for_clients.setUp();
         server_for_clients.setRsmLockService(this.counter_service);
+        System.out.println("Replicated Lock Server is already set up!");
     }
 
 

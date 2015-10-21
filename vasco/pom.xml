@@ -109,58 +109,66 @@
       <source>1.8</source>
       <target>1.8</target>
       <excludes>
-        <exclude>**/org/mpi/vasco/sieve/runtimelogic/shadowoperationcreator/ShadowOperationCreator.java</exclude>
       	<!--  <exclude>**/org/mpi/vasco/util/debug/**</exclude>-->
       	<!--  <exclude>**/org/mpi/vasco/util/IDFactories/**</exclude>-->
-      	<exclude>**/org/mpi/vasco/util/weakestprecondtion/**</exclude>
-      	<exclude>**/org/mpi/vasco/util/annotationparser/**</exclude>
-      	<exclude>**/org/mpi/vasco/util/commonfunc/**</exclude>
-        <exclude>**/org/mpi/vasco/util/crdtlib/datatypes/**</exclude>
-        <exclude>**/org/mpi/vasco/util/crdtlib/dbannotationtypes/**</exclude>
         <exclude>**/org/mpi/vasco/util/crdtlib/verifieddatatypes/**</exclude>
         <!--   <exclude>**/org/mpi/vasco/coordination/protocols/centr/rsm/**</exclude>  -->
       </excludes>
     </configuration>
-  </plugin>
-  
-  <plugin>
-	<groupId>org.apache.maven.plugins</groupId>
-	<artifactId>maven-jar-plugin</artifactId>
-	<configuration>
-		<archive>
-			<manifest>
-				<mainClass>org.mpi.vasco.txstore.coordinator.NewCoordinator</mainClass>
-				<addClasspath>true</addClasspath>
-			</manifest>
-		</archive>
-				<archive>
-			<manifest>
-				<mainClass>org.mpi.vasco.txstore.appextend.MicroStorage</mainClass>
-				<addClasspath>true</addClasspath>
-			</manifest>
-		</archive>
-		<archive>
-			<manifest>
-				<mainClass>org.mpi.vasco.coordination.protocols.centr.ReplicatedLockService</mainClass>
-				<addClasspath>true</addClasspath>
-			</manifest>
-		</archive>
-	</configuration>
   </plugin>
 	<plugin>
 		<groupId>org.dstovall</groupId>
 		<artifactId>onejar-maven-plugin</artifactId>
 		<version>1.4.4</version>
 		<executions>
-			<execution>
-				<configuration>
-					<classifier>onejar</classifier>
-				</configuration>
-				<goals>
-					<goal>one-jar</goal>
-				</goals>
-			</execution>
-		</executions>
+      <execution>
+        <id>build-first</id>
+          <configuration>
+            <mainClass>org.mpi.vasco.txstore.coordinator.NewCoordinator</mainClass>
+            <attachToBuild>true</attachToBuild>
+            <classifier>onejar</classifier>
+            <filename>coordinator-big.jar</filename>
+          </configuration>
+          <goals>
+            <goal>one-jar</goal>
+          </goals>
+        </execution>
+      <execution>
+        <id>build-second</id>
+          <configuration>
+            <mainClass>org.mpi.vasco.txstore.appextend.MicroStorage</mainClass>
+            <attachToBuild>true</attachToBuild>
+            <classifier>onejar</classifier>
+            <filename>storageshim-big.jar</filename>
+          </configuration>
+          <goals>
+            <goal>one-jar</goal>
+          </goals>
+        </execution>
+         <execution>
+        <id>build-third</id>
+          <configuration>
+            <mainClass>org.mpi.vasco.coordination.protocols.centr.ReplicatedLockService</mainClass>
+            <attachToBuild>true</attachToBuild>
+            <classifier>onejar</classifier>
+            <filename>replicatedlockserver-big.jar</filename>
+          </configuration>
+          <goals>
+            <goal>one-jar</goal>
+          </goals>
+        </execution>
+        <execution>
+        <id>build-fourth</id>
+          <configuration>
+            <attachToBuild>true</attachToBuild>
+            <classifier>onejar</classifier>
+            <filename>vasco-all-big.jar</filename>
+          </configuration>
+          <goals>
+            <goal>one-jar</goal>
+          </goals>
+        </execution>
+      </executions>
 	</plugin>
 </plugins>
 </build>
