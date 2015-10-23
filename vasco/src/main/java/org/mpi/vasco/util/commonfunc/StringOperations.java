@@ -230,6 +230,9 @@ public class StringOperations {
 	 * @return the string
 	 */
 	public static String addDoubleQuoteToHeadTail(String _str) {
+		if(_str == null || _str.equals("")){
+			return "";
+		}
 		if(_str.charAt(0) == '\"' && 
 				_str.charAt(_str.length()-1) == '\"') {
 			return _str;
