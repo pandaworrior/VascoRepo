@@ -60,6 +60,8 @@ public class StaticFPtoWPsStore {
 	/** The opener of weakest precondition. */
 	public static String openerOfWeakestPrecondition = "weakestprecondition:";
 	
+	public static String openerOfSimplifiedName = "simplifiedname:";
+	
 	/** The node id counter. */
 	int nodeIdCounter = 0;
 	
@@ -169,7 +171,7 @@ public class StaticFPtoWPsStore {
 				fingerPrints[0] = pureFpStr;
 			}
 			String pureWpStr = wpStr.substring(openerOfWeakestPrecondition.length());
-			String simplifiedOpName = contentLines.get(i+2);
+			String simplifiedOpName = contentLines.get(i+2).substring(openerOfSimplifiedName.length());
 			this.addStaticFPtoWPsStoreNode( fingerPrints, 
 					new WeakestPrecondition(pureWpStr, simplifiedOpName));
 		}
