@@ -30,12 +30,12 @@ public class ProxyCommitMessage extends MessageBase {
 	offset += txnId.getByteSize();
 	op.getBytes(getBytes(), offset);
 	offset += op.getByteSize();
-	byte[] opNameArr = opName.getBytes();
-	System.arraycopy(opNameArr, 0, bytes, offset, opNameArr.length);
-	offset += opNameArr.length;
 	Debug.println("Current offset after encoding txnId and operation is: " + offset);
 	rwset.getBytes(getBytes(), offset);
 	offset += rwset.getByteSize();
+	byte[] opNameArr = opName.getBytes();
+	System.arraycopy(opNameArr, 0, bytes, offset, opNameArr.length);
+	offset += opNameArr.length;
 	if (bytes.length != offset)
 	    throw new RuntimeException("failed to consume entire byte array");
 	
