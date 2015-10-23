@@ -15,6 +15,8 @@ public class ProxyCommitMessage extends MessageBase {
 
     public ProxyCommitMessage(String opName, ProxyTxnId txnId, ReadWriteSet rwset,  Operation op){
 	super(MessageTags.PROXYCOMMIT, computeByteSize(opName, txnId, rwset, op));
+	
+	Debug.println("computed total size is : " + this.getPayloadSize());
 	this.opName = opName;
 	this.txnId = txnId;
 	this.rwset = rwset;
@@ -117,8 +119,12 @@ public class ProxyCommitMessage extends MessageBase {
     }
 
     static int computeByteSize(String opName, ProxyTxnId tx, ReadWriteSet rws, Operation op0){
-    	Debug.println(tx.getByteSize() + rws.getByteSize() + op0.getByteSize() + opName.getBytes().length);
-	return  tx.getByteSize() + rws.getByteSize() + op0.getByteSize() + opName.getBytes().length;
+    	
+    	Debug.println("txnId size : " +tx.getByteSize());
+    	Debug.println("readwrite set size: " + rws.getByteSize());
+    	Debug.println("op size : " + op0.getByteSize());
+    	Debug.println("op name size : "+ opName.getBytes().length);
+    	return  tx.getByteSize() + rws.getByteSize() + op0.getByteSize() + opName.getBytes().length;
     }
 
 

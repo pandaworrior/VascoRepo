@@ -28,10 +28,14 @@ public class ReadWriteSet {
 		rs = new ReadSet(b, offset);
 		offset += rs.getByteSize();
 		ws = new WriteSet(b, offset);
+		offset += ws.getByteSize();
 	}
 
 	public void getBytes(byte[] b, int offset) {
 		if (offset + getByteSize() < b.length) {
+			Debug.println("readwrite set size : " + this.getByteSize());
+			Debug.println("offset : " + offset);
+			Debug.println("total size of the buffer : " + b.length);
 			Debug.println("needed size " + offset + getByteSize()
 					+ "  capacity " + b.length);
 			throw new RuntimeException("not enough bytes!");
