@@ -183,8 +183,10 @@ public class DBOpEntry{
 		queryBuilder.append(this.getDbTableName());
 		queryBuilder.append("(");
 		StringBuilder valueStrBuilder = new StringBuilder(" VALUES( ");
+		Debug.println("Assembled string so far: " + queryBuilder.toString());
 		for(int i = 0; i < this.getPrimaryKeys().size(); i++) {
 			PrimitiveType pt = this.getPrimaryKeys().get(i);
+			Debug.println("data name : " + pt.getDataName());
 			if(i == 0){
 				queryBuilder.append(pt.getDataName());
 				valueStrBuilder.append(CrdtEncodeDecode.getValueString(dateFormat, pt));
