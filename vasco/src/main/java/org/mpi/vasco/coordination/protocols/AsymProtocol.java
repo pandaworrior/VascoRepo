@@ -63,6 +63,7 @@ public class AsymProtocol extends Protocol{
 	public
 	LockReply getPermission(ProxyTxnId txnId, LockRequest lcRequest) {
 		
+		Debug.println("\t\t----->start getting asymprotocol permission");
 		if(lcRequest == null){
 			throw new RuntimeException("no lc request for " + txnId.toString());
 		}
@@ -120,7 +121,7 @@ public class AsymProtocol extends Protocol{
 			//no barriers to be waiting, then return null
 		}
 		
-		Debug.println("Received all replies \n");
+		Debug.println("\t\t----->end getting asymprotocol permission");
 		return lcReply;
 	}
 
@@ -237,8 +238,9 @@ public class AsymProtocol extends Protocol{
 	 * @see org.mpi.vasco.coordination.protocols.util.Protocol#cleanUp(org.mpi.vasco.txstore.util.ProxyTxnId)
 	 */
 	public void cleanUp(ProxyTxnId txnId, Set<String> keys, String opName) {
-		Debug.println("cleanUp \n");
+		Debug.println("\t\t ----> start cleaning up [asym]");
 		this.cleanUpLocal(txnId, keys, opName);
+		Debug.println("\t\t <---- end cleaning up [asym]");
 	}
 	
 

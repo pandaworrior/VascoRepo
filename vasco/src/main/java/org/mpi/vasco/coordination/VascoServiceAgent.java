@@ -86,7 +86,9 @@ public class VascoServiceAgent {
 		}
 	}*/
 	
-	public LockRequest generateLockRequestFromWriteSet(String opName, ProxyTxnId txnId, WriteSet wse){
+	public LockRequest generateLockRequestFromWriteSet(String opName, ProxyTxnId txnId, 
+			WriteSet wse){
+		Debug.println("Generate lock request");
 		int pType = this.getProtocolType(opName);
 		if(pType != -1){
 			//generate a lockrequest
@@ -94,6 +96,7 @@ public class VascoServiceAgent {
 			for (int i = 0; i < wse.size(); i ++){
 				WriteSetEntry wseEntry = wse.getWriteSetEntry(i);
 				if(wseEntry.isInvariantRelated()){
+					Debug.println("The item is invariant related " + wseEntry.getObjectId());
 					lr.addKey(wseEntry.getObjectId());
 				}
 			}
@@ -101,29 +104,36 @@ public class VascoServiceAgent {
 			Debug.printf("Generate a lock request %s\n", lr.toString());
 			return lr;
 		}
+		Debug.println("Generate a null lock request");
 		return null;
 	}
 	
 	public void getPemissions(ProxyTxnId txnId, LockRequest lcR){
+		Debug.println("\t------>start getting the permissions");
 		if(lcR == null){
-			return;
+			Debug.println("\t\t ---->No permission is needed");
+		}else{
+			int protocolType = this.getProtocolType(lcR);
+			if(protocolType == -1){
+				throw new RuntimeException("protocol type must be valid");
+			}
+			this.getProtocol(protocolType).getPermission(txnId, lcR);
 		}
-		int protocolType = this.getProtocolType(lcR);
-		if(protocolType == -1){
-			throw new RuntimeException("protocol type must be valid");
-		}
-		this.getProtocol(protocolType).getPermission(txnId, lcR);
+		Debug.println("\t<------end getting the permissions");
 	}
 	
 	public void cleanUpLocalOperation(ProxyTxnId txnId, LockRequest lcR){
+		Debug.println("\t----> start cleanning up an local operation");
 		if(lcR == null){
-			return;
+			Debug.println("\t\t----> no need to clean up");
+		}else{
+			int protocolType = this.getProtocolType(lcR);
+			if(protocolType == -1){
+				throw new RuntimeException("protocol type must be valid");
+			}
+			this.getProtocol(protocolType).cleanUp(txnId, lcR.getKeyList(), lcR.getOpName());
 		}
-		int protocolType = this.getProtocolType(lcR);
-		if(protocolType == -1){
-			throw new RuntimeException("protocol type must be valid");
-		}
-		this.getProtocol(protocolType).cleanUp(txnId, lcR.getKeyList(), lcR.getOpName());
+		Debug.println("\t<---- end cleanning up an local operation");
 	}
 	
 	public void cleanUpRemoteOperation(ProxyTxnId txnId, Set<String> keys, String opName){
@@ -136,15 +146,18 @@ public class VascoServiceAgent {
 	
 	/*Call before committing the transaction*/
 	public void waitForBeExecuted(ProxyTxnId txnId, LockRequest lcR){
+		Debug.println("\t-----> start waiting for being executed");
 		if(lcR == null){
 			// the operations do not need to be coordinated
-			return;
+			Debug.println("\t\t ----> no need for coordination");
+		}else{
+			int protocolType = this.getProtocolType(lcR);
+			if(protocolType != -1){
+				throw new RuntimeException("protocol type must be valid");
+			}
+			this.getProtocol(protocolType).waitForBeExcuted(txnId, lcR);
 		}
-		int protocolType = this.getProtocolType(lcR);
-		if(protocolType != -1){
-			throw new RuntimeException("protocol type must be valid");
-		}
-		this.getProtocol(protocolType).waitForBeExcuted(txnId, lcR);
+		Debug.println("\t<----- end waiting for being executed");
 	}
 
 	/**

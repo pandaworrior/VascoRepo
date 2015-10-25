@@ -64,6 +64,7 @@ public class SymProtocol extends Protocol{
 	 */
 	@Override
 	public LockReply getPermission(ProxyTxnId txnId, LockRequest lcR) {
+		Debug.println("\t\t------> start getting symprotocol permission");
 		LockReqMessage msg = new LockReqMessage(txnId,
 				client.getMyId(), lcR);
 		SymMetaData meta = this.addInitialMetaData(txnId, lcR);
@@ -79,6 +80,7 @@ public class SymProtocol extends Protocol{
 		}
 		//return the lcReply and remove it from the set
 		this.cleanUpMetaData(txnId);
+		Debug.println("\t\t<------ end getting symprotocol permission");
 		return meta.getLockReply();
 	}
 
@@ -132,11 +134,12 @@ public class SymProtocol extends Protocol{
 
 	@Override
 	public void cleanUp(ProxyTxnId txnId, Set<String> keys, String opName) {
+		Debug.println("\t\t-----> start cleanning up [sym]");
 		this.incrementLocalCounterByOne(keys, opName);
 		if(this.symMetaDataMap.contains(txnId)){
 			this.symMetaDataMap.remove(txnId);
 		}
-		
+		Debug.println("\t\t<----- end cleanning up [sym]");
 	}
 	
 	private boolean isCounterMatching(Map<String, Map<String, Long>> keyCounters){
@@ -186,6 +189,7 @@ public class SymProtocol extends Protocol{
 
 	@Override
 	public void waitForBeExcuted(ProxyTxnId txnId, LockRequest lcR) {
+		Debug.println("\t\t----> start waiting for being executed [sym]");
 		LockReply lcReply = this.getPermission(txnId, lcR);
 		synchronized(this.countersLocalCopy){
 			while(!this.isCounterMatching(lcReply.getKeyCounterMap())){
@@ -196,6 +200,7 @@ public class SymProtocol extends Protocol{
 				}
 			}
 		}
+		Debug.println("\t\t<---- end waiting for being executed [sym]");
 	}
 
 	public Map<String, Map<String, Long>> getCountersLocalCopy() {
