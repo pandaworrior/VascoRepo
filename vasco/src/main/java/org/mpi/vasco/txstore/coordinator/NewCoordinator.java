@@ -203,6 +203,7 @@ public class NewCoordinator extends BaseNode {
 		//generate lock request and isConflicting flag
 		LockRequest lcRequest = this.getVascoAgent().generateLockRequestFromWriteSet(
 				txn.getOpName(), txn.getTxnId(), txn.getWriteSet());
+		txn.setLcRequest(lcRequest);
 		txn.setConflicting(!(lcRequest == null));
 		finishTransaction(txn);
 		/*synchronized(checkObj){
