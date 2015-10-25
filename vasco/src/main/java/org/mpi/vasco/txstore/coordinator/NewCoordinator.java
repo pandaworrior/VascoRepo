@@ -326,6 +326,7 @@ public class NewCoordinator extends BaseNode {
 			}
 		}else{
 			if(!checkReadCoherence(tmpRec)){
+				//TODO: needed or not?
 				abortTxn(tmpRec);
 				conflictOpReadAbort++;
 				return false;
@@ -397,10 +398,11 @@ public class NewCoordinator extends BaseNode {
 								 tmpRec.getStartClock().toString());
 						return false;
 					}else{
-						if (u.lc.precedes(tmpRec.getStartClock())
+						if (u.lc != null && u.lc.precedes(tmpRec.getStartClock())
 								&& ( !u.lc.precedes(rse.getLogicalClock()))){
 							//read a value, it has been modified between its timestamp and the begin time
 							//this means that it is not from the most recent version
+							//TODO: needed or not?
 							System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
 									 rse.getObjectId());
 							System.out.println("update to: " + u.lc.toString() + " precedes beginTime :" +
@@ -447,15 +449,17 @@ public class NewCoordinator extends BaseNode {
 				ReadSetEntry rsE = rsEntries[i];
 				updateEntry u = objectUpdates.getUpdates(rsE
 						.getObjectId());
-				if((u.isLockedByOtherTransaction(tmpRec.getTxnId())) || 
-						(!u.lc.precedes(rsE.getLogicalClock()))){
-					 System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
-							 rsE.getObjectId()); System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
-					 System.out.println("read entry: " +
-							 rsE.getLogicalClock()); 
-					 System.out.println("u not precedes RE: " +
-					 !u.lc.precedes(rsE.getLogicalClock()));
-					return false;
+				if(u != null){
+					if((u.isLockedByOtherTransaction(tmpRec.getTxnId())) || 
+							(u.lc != null && (!u.lc.precedes(rsE.getLogicalClock())))){
+						 System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
+								 rsE.getObjectId()); System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
+						 System.out.println("read entry: " +
+								 rsE.getLogicalClock()); 
+						 System.out.println("u not precedes RE: " +
+						 !u.lc.precedes(rsE.getLogicalClock()));
+						return false;
+					}
 				}
 			}
 			

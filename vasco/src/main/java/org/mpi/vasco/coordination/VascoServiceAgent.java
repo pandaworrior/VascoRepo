@@ -123,7 +123,7 @@ public class VascoServiceAgent {
 	}
 	
 	public void cleanUpLocalOperation(ProxyTxnId txnId, LockRequest lcR){
-		Debug.println("\t----> start cleanning up an local operation");
+		Debug.println("\t----> start cleanning up a local operation");
 		if(lcR == null){
 			Debug.println("\t\t----> no need to clean up");
 		}else{
@@ -133,15 +133,18 @@ public class VascoServiceAgent {
 			}
 			this.getProtocol(protocolType).cleanUp(txnId, lcR.getKeyList(), lcR.getOpName());
 		}
-		Debug.println("\t<---- end cleanning up an local operation");
+		Debug.println("\t<---- end cleanning up a local operation");
 	}
 	
 	public void cleanUpRemoteOperation(ProxyTxnId txnId, Set<String> keys, String opName){
+		Debug.println("\t----> start cleanning up a remote operation");
 		int protocolType = this.getProtocolType(opName);
 		if(protocolType == -1){
-			return;
+			throw new RuntimeException("protocol type must be valid");
+		}else{
+			this.getProtocol(protocolType).cleanUp(txnId, keys, opName);
 		}
-		this.getProtocol(protocolType).cleanUp(txnId, keys, opName);
+		Debug.println("\t<---- end cleanning up a remote operation");
 	}
 	
 	/*Call before committing the transaction*/
@@ -152,7 +155,7 @@ public class VascoServiceAgent {
 			Debug.println("\t\t ----> no need for coordination");
 		}else{
 			int protocolType = this.getProtocolType(lcR);
-			if(protocolType != -1){
+			if(protocolType == -1){
 				throw new RuntimeException("protocol type must be valid");
 			}
 			this.getProtocol(protocolType).waitForBeExcuted(txnId, lcR);

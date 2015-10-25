@@ -84,7 +84,7 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
     }
 
 
-    public String printCounters() {
+    public String countersToString() {
         StringBuilder sb=new StringBuilder();
         for(Map.Entry<String, Map<String, Long>> fstLEntry: counters.entrySet()) {
         	sb.append("key: " + fstLEntry.getKey() + "\n");
@@ -260,8 +260,11 @@ public class CounterService implements StateMachine, RAFT.RoleChange {
         			}
     			}
         	}
-            return lcReply;
         }
+        Debug.println("\t ----> printOutCounters");
+        Debug.println(this.countersToString());
+        Debug.println("\t<---- printOutCounters");
+        return lcReply;
     }
 
 	public Map<String, Map<String, Long>> getCounters() {

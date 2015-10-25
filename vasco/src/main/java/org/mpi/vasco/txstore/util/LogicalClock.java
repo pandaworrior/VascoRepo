@@ -8,7 +8,7 @@ import java.util.concurrent.locks.ReentrantLock;
 //TODO: remove all locks
 public class LogicalClock implements java.io.Serializable {
 	
-	public static String DefaultForInTrx = "0-";
+	public static String DefaultForInTrx = "";
     long[] dcCount;
 //    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     ReentrantLock lock = new ReentrantLock();

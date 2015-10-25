@@ -78,8 +78,7 @@ public class SymProtocol extends Protocol{
 				}
 			}
 		}
-		//return the lcReply and remove it from the set
-		this.cleanUpMetaData(txnId);
+		
 		Debug.println("\t\t<------ end getting symprotocol permission");
 		return meta.getLockReply();
 	}
@@ -101,10 +100,6 @@ public class SymProtocol extends Protocol{
 		SymMetaData meta = new SymMetaData(lcR, null);
 		this.symMetaDataMap.put(txnId, meta);
 		return meta;
-	}
-	
-	private void cleanUpMetaData(ProxyTxnId txnId){
-		this.symMetaDataMap.remove(txnId);
 	}
 
 	@Override
@@ -140,6 +135,10 @@ public class SymProtocol extends Protocol{
 			this.symMetaDataMap.remove(txnId);
 		}
 		Debug.println("\t\t<----- end cleanning up [sym]");
+		
+        Debug.println("\t ----> printOut Local Counters");
+        Debug.println(this.countersToString());
+        Debug.println("\t<---- printOut Local Counters");
 	}
 	
 	private boolean isCounterMatching(Map<String, Map<String, Long>> keyCounters){
@@ -190,7 +189,7 @@ public class SymProtocol extends Protocol{
 	@Override
 	public void waitForBeExcuted(ProxyTxnId txnId, LockRequest lcR) {
 		Debug.println("\t\t----> start waiting for being executed [sym]");
-		LockReply lcReply = this.getPermission(txnId, lcR);
+		LockReply lcReply = this.symMetaDataMap.get(txnId).getLockReply();
 		synchronized(this.countersLocalCopy){
 			while(!this.isCounterMatching(lcReply.getKeyCounterMap())){
 				try {
@@ -216,5 +215,20 @@ public class SymProtocol extends Protocol{
 	public void cleanUpLocal(ProxyTxnId txnId, Set<String> keys, String opName) {
 		throw new RuntimeException("should not call this cleanUpLocal in the sym protocol class");
 	}
+	
+	private String countersToString() {
+        StringBuilder sb=new StringBuilder();
+        for(Map.Entry<String, Map<String, Long>> fstLEntry: this.countersLocalCopy.entrySet()) {
+        	sb.append("key: " + fstLEntry.getKey() + "\n");
+        	sb.append("{");
+        	for(Map.Entry<String, Long> sndLEntry : fstLEntry.getValue().entrySet()){
+        		sb.append("op: " + sndLEntry.getKey() + ",");
+        		sb.append(" value: ");
+        		sb.append(sndLEntry.getValue().longValue());
+        	}
+        	sb.append("}\n");
+        }
+        return sb.toString();
+    }
 
 }
