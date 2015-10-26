@@ -52,7 +52,14 @@ public class TransactionRecord{
     LockRequest lcRequest;
     
     public String getOpName() {
-		return this.msg.getOpName();
+    	if(this.msg != null){
+    		return this.msg.getOpName();
+		}else{
+			if(this.rOpMsg != null){
+				return this.rOpMsg.getOpName();
+			}
+		}
+    	throw new RuntimeException("this operation is either not local or remote");
 	}
 
 	public TransactionRecord(){

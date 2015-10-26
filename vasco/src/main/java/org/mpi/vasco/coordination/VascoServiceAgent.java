@@ -140,7 +140,7 @@ public class VascoServiceAgent {
 		Debug.println("\t----> start cleanning up a remote operation");
 		int protocolType = this.getProtocolType(opName);
 		if(protocolType == -1){
-			throw new RuntimeException("protocol type must be valid");
+			Debug.println("\t\t----> no need to clean up");
 		}else{
 			this.getProtocol(protocolType).cleanUp(txnId, keys, opName);
 		}
@@ -156,7 +156,7 @@ public class VascoServiceAgent {
 		}else{
 			int protocolType = this.getProtocolType(lcR);
 			if(protocolType == -1){
-				throw new RuntimeException("protocol type must be valid");
+				throw new RuntimeException("protocol type must be valid for the lock request " + lcR.toString());
 			}
 			this.getProtocol(protocolType).waitForBeExcuted(txnId, lcR);
 		}
