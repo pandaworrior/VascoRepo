@@ -8,6 +8,7 @@ import org.mpi.vasco.txstore.messages.MessageTags;
 // receiving messages
 import org.mpi.vasco.txstore.messages.AckCommitTxnMessage;
 import org.mpi.vasco.txstore.messages.CommitShadowOpMessage;
+import org.mpi.vasco.txstore.messages.FakedRemoteShadowOpMessage;
 import org.mpi.vasco.txstore.messages.MessageFactory;
 import org.mpi.vasco.txstore.messages.RemoteShadowOpMessage;
 
@@ -75,6 +76,9 @@ public class RemoteCoordinator extends BaseNode {
 			coord.messages[6]++;
 			process((RemoteShadowOpMessage) msg);
 			return;
+		case MessageTags.FAKEDREMOTESHADOW:
+			process((FakedRemoteShadowOpMessage) msg);
+			return;
 		default:
 			throw new RuntimeException("invalid message tag: " + msg.getTag());
 		}
@@ -90,10 +94,8 @@ public class RemoteCoordinator extends BaseNode {
 		// insure that one dc doesnt "always win" because another is underloaded
 		coord.setLocalTxn(tmpRec.getFinishTime().getCount());
 		
-		if(!(tmpRec.getShadowOp() instanceof DBSifterEmptyShd)){
-			coord.updateObjectTable(tmpRec.getWriteSet().getWriteSet(), tmpRec.getMergeClock(), 
-					tmpRec.getFinishTime(), tmpRec.getTxnId());
-		}
+		coord.updateObjectTable(tmpRec.getWriteSet().getWriteSet(), tmpRec.getMergeClock(), 
+				tmpRec.getFinishTime(), tmpRec.getTxnId());
 		
 		this.coord.getVascoAgent().cleanUpRemoteOperation(tmpRec.getTxnId(), 
 				tmpRec.getWriteSet().getInvariantRelatedKeys(), tmpRec.getOpName());
@@ -156,6 +158,13 @@ public class RemoteCoordinator extends BaseNode {
 		txn.setCommitShadowOpMessage(csm);
 		Debug.println("commit remote to data writer" + csm);
 		sendToStorage(csm, 0); //TODO: fix to more generic
+	}
+	
+	private void process(FakedRemoteShadowOpMessage fShMsg){
+		Debug.println("\t -----> clean up for an abort conflicting op");
+		this.coord.getVascoAgent().cleanUpRemoteOperation(fShMsg.getTxnId(), 
+				fShMsg.getWriteset().getInvariantRelatedKeys(), fShMsg.getOpName());
+		Debug.println("\t <----- clean up for an abort conflicting op");
 	}
 
 

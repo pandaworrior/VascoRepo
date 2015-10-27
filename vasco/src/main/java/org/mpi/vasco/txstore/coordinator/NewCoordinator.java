@@ -9,6 +9,7 @@ import org.mpi.vasco.txstore.messages.MessageTags;
 import org.mpi.vasco.txstore.messages.AckCommitTxnMessage;
 import org.mpi.vasco.txstore.messages.BeginTxnMessage;
 import org.mpi.vasco.txstore.messages.CommitShadowOpMessage;
+import org.mpi.vasco.txstore.messages.FakedRemoteShadowOpMessage;
 import org.mpi.vasco.txstore.messages.FinishTxnMessage;
 import org.mpi.vasco.txstore.messages.MessageFactory;
 import org.mpi.vasco.txstore.messages.OperationMessage;
@@ -481,19 +482,19 @@ public class NewCoordinator extends BaseNode {
 		}
 		sendToProxy(msg2, tmpRec.getTxnId().getProxyId());
 		if(tmpRec.isConflicting()){
-			//faked a commit message to both storage and remote
+			//faked a commit message to remote
 			this.commitConflictingFakedTxn(tmpRec);
-		}else{
-			records.remove(tmpRec.getTxnId());
-			//clean datastructure
-			if(tmpRec.msg != null)
-				mf.returnProxyCommitMessage(tmpRec.msg);
-			mf.returnBeginTxnMessage(tmpRec.bMsg);
-			mf.returnAckTxnMessage(tmpRec.aMsg);
-			mf.returnAckCommitTxnMessage(msg2);
-			tmpRec.reset();
-			txnPool.returnObject(tmpRec);
 		}
+		
+		records.remove(tmpRec.getTxnId());
+		//clean datastructure
+		if(tmpRec.msg != null)
+			mf.returnProxyCommitMessage(tmpRec.msg);
+		mf.returnBeginTxnMessage(tmpRec.bMsg);
+		mf.returnAckTxnMessage(tmpRec.aMsg);
+		mf.returnAckCommitTxnMessage(msg2);
+		tmpRec.reset();
+		txnPool.returnObject(tmpRec);
 	}
 
 	/**
@@ -604,48 +605,28 @@ public class NewCoordinator extends BaseNode {
 	 */
 	private void commitConflictingFakedTxn(TransactionRecord tmpRec) {
 		Debug.println("Commit a conflicting abort transaction");
-		synchronized(commitTxnSynObj){
-			tmpRec.setMergeClock(this.getNextLogicalClock());
-			TimeStamp ns = new TimeStamp(getMyDatacenterId(), nextLocalTxn());
-			tmpRec.setFinishTime(ns);
+		
+		//two steps
+		
+		//first clean up locked items in the update tables
+		WriteSetEntry[] wsEntries = tmpRec.getWriteSet().getWriteSet();
+		int numOfWriteEntries = wsEntries.length;
+		synchronized (objectUpdates) {
+			//first lock all write entries
+			for(int i = 0; i < numOfWriteEntries; i++){
+				WriteSetEntry wsE = wsEntries[i];
+				updateEntry u = objectUpdates.getUpdates(wsE
+						.getObjectId());
+				u.unlock(tmpRec.getTxnId());
+			}
 		}
 		
-		DBSifterEmptyShd op = null;
-		try {
-			op = DBSifterEmptyShd.createOperation();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		tmpRec.setShadowOp(op);
-		//commit to data writer
-		CommitShadowOpMessage csm = mf.borrowCommitShadowOpMessage();
-		if(csm == null){
-			csm = new CommitShadowOpMessage(tmpRec.getTxnId(), 
-					tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock());
-		}else{
-			csm.encodeMessage(tmpRec.getTxnId(), 
-					tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock());
-		}
-		tmpRec.setCommitShadowOpMessage(csm);
+		//second, send a faked message to remote, and ask remote coordinator to updates the sym/asym meta data
+		FakedRemoteShadowOpMessage fShMsg = new FakedRemoteShadowOpMessage(tmpRec.getTxnId(),
+				tmpRec.getWriteSet(), tmpRec.getOpName());
 		
-		RemoteShadowOpMessage rom = mf.borrowRemoteShadowOpMessage();
-		if(rom == null){
-			rom = new RemoteShadowOpMessage(tmpRec.getTxnId(), 
-				tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock(), tmpRec.getWriteSet(),
-				tmpRec.getOpName());
-		}else{
-			rom.encodeMessage(tmpRec.getTxnId(), 
-					tmpRec.getShadowOp(), tmpRec.getFinishTime(), tmpRec.getMergeClock(), tmpRec.getWriteSet(),
-					tmpRec.getOpName());
-		}
-		tmpRec.setRemoteShadowOpMessage(rom);
-		Debug.println("commit ConflictingFaked to data writer" + csm);
-		
-		sendToStorage(csm, 0);
-		//send to remote site
-		
-		Debug.println("send ConflictingFaked to remote data centers " + rom);
-		sendToOtherRemoteCoordinator(rom);
+		Debug.println("send ConflictingFaked to remote data centers " + fShMsg);
+		sendToOtherRemoteCoordinator(fShMsg);
 	}
 
 	long commitStartTime = System.nanoTime();

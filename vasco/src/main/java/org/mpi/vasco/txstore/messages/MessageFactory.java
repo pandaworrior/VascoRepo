@@ -127,6 +127,8 @@ public class MessageFactory{
 			rOpMsg.decodeMessage(bytes);
 			return rOpMsg;
 		}
+	case MessageTags.FAKEDREMOTESHADOW:
+		return new FakedRemoteShadowOpMessage(bytes);
 	default:
 
 	    throw new RuntimeException("Invalid message tag:  "+tag);

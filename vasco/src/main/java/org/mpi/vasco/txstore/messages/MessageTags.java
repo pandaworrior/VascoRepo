@@ -54,6 +54,8 @@ public class MessageTags extends MessageTagBase{
 	public final static int ACKCOMMIT = 19;
 	
 	public final static int REMOTESHADOW = 20;
+	
+	public final static int FAKEDREMOTESHADOW = 21;
 
 	public final static String getString(int i) {
 		switch (i) {
@@ -91,6 +93,8 @@ public class MessageTags extends MessageTagBase{
 			return "AckCommit";
 		case MessageTags.REMOTESHADOW:
 			return "RemoteShadow";
+		case MessageTags.FAKEDREMOTESHADOW:
+			return "FakedRemoteShadow";
 		default:
 
 			throw new RuntimeException("Invalid message tag:  " + i);
