@@ -40,13 +40,13 @@ public class CommitScratchpadFactory implements ScratchpadFactory {
 		localSPNum = s;
 		configureScratchpad(dbXmlFile);
 		initSPs();
-		//define default logical clock
-		String defaultLogicalClock="0"; //blue epoch
-		for(int i=0; i<dcCount;i++){
+		//define default logical clock, no red epoch any more
+		String defaultLogicalClock="0";
+		for(int i=0; i< dcCount - 1;i++){
 			defaultLogicalClock+="-0";
 		}
 		LogicalClock.DefaultForInTrx=defaultLogicalClock;
-		Debug.println("Default logical clock ="+LogicalClock.DefaultForInTrx);
+		Debug.println("Default logical clock = "+LogicalClock.DefaultForInTrx);
 	}
 
 	public void configureScratchpad(String dbXmlFile) {

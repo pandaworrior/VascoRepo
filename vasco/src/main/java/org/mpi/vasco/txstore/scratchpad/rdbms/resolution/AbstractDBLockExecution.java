@@ -104,8 +104,11 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 				buffer.append( pk[i]);
 				buffer.append( "'");
 			}
-		}		
-*/	}
+		}
+			
+*/	
+		throw new RuntimeException("Should not be here");
+	}
 
 	
 	/**
