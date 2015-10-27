@@ -107,7 +107,7 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 		}
 			
 */	
-		throw new RuntimeException("Should not be here");
+		//throw new RuntimeException("Should not be here");
 	}
 
 	
