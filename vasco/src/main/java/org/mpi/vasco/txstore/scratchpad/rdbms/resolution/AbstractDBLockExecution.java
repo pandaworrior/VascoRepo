@@ -93,7 +93,11 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 	 * Add deleted to where statement
 	 */
 	public void addDeletedKeysWhere( StringBuffer buffer) {
-/*		Iterator<String[]> it = deletedPks.iterator();
+		if(deletedPks == null || deletedPks.isEmpty()){
+			Debug.println("\t-----> no deleted keys <------");
+			return;
+		}
+		Iterator<String[]> it = deletedPks.iterator();
 		while( it.hasNext()) {
 			String[] pk = it.next();
 			String[] pkAlias = def.getPksAlias();
@@ -105,9 +109,9 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 				buffer.append( "'");
 			}
 		}
-			
-*/	
-		//throw new RuntimeException("Should not be here");
+		Debug.println("\t ---------> after removing deleted keys");
+		Debug.println(buffer.toString());
+		Debug.println("\t<---------after removing deleted keys");
 	}
 
 	
@@ -363,6 +367,8 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 			buffer.append( e.toString());
 			buffer.append( " ) ");
 		}
+		
+		this.addDeletedKeysWhere(buffer);
 	}
 	
 	/**
@@ -390,6 +396,7 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 			buffer.append( replaceAliasInStr( e.toString(), policies, tables, inTempTable));
 			buffer.append( " ) ");
 		}
+		this.addDeletedKeysWhere(buffer);
 /*		Iterator<String[]> it = deletedPks.iterator();
 		while( it.hasNext()) {
 			String[] pk = it.next();
