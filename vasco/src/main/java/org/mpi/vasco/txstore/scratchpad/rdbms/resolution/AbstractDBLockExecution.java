@@ -93,7 +93,7 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 	 * Add deleted to where statement
 	 */
 	public void addDeletedKeysWhere( StringBuffer buffer) {
-		if(deletedPks == null || deletedPks.isEmpty()){
+		/*if(deletedPks == null || deletedPks.isEmpty()){
 			Debug.println("\t-----> no deleted keys <------");
 			return;
 		}
@@ -111,7 +111,7 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 		}
 		Debug.println("\t ---------> after removing deleted keys");
 		Debug.println(buffer.toString());
-		Debug.println("\t<---------after removing deleted keys");
+		Debug.println("\t<---------after removing deleted keys");*/
 	}
 
 	
@@ -1440,7 +1440,7 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 		buffer.append( ")");
 		buffer.append( ";");
 		
-		Debug.println( ":" + buffer.toString());
+		Debug.println( "Select keys before delete:" + buffer.toString());
 		ResultSet res = db.executeQuery( buffer.toString());
 		while( res.next()) {
 			int nPks = def.getPksPlain().length;
@@ -1461,7 +1461,7 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 			}
 		}
 		res.close();
-		buffer = new StringBuffer();
+		/*buffer = new StringBuffer();
 		buffer.append( "delete from ");
 		buffer.append( this.tempTableName);
 		buffer.append( " where ");
@@ -1470,7 +1470,8 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 		
 		Debug.println( ":" + buffer.toString());
 		int result = db.executeUpdate( buffer.toString());
-		return DBUpdateResult.createResult( result);
+		return DBUpdateResult.createResult( result);*/
+		return DBUpdateResult.createResult(1);
 	}
 
 	/**
