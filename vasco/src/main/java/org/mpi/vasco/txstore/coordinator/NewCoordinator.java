@@ -452,9 +452,8 @@ public class NewCoordinator extends BaseNode {
 					if((u.isLockedByOtherTransaction(tmpRec.getTxnId())) || 
 							(u.lc != null && (!u.lc.precedes(rsE.getLogicalClock())))){
 						 System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
-								 rsE.getObjectId()); System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
-						 System.out.println("read entry: " +
-								 rsE.getLogicalClock()); 
+								 rsE.getObjectId()); 
+						 System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
 						 System.out.println("u not precedes RE: " +
 						 !u.lc.precedes(rsE.getLogicalClock()));
 						return false;
