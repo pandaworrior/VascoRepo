@@ -1,15 +1,13 @@
 package org.mpi.vasco.txstore.coordinator;
 
-import org.mpi.vasco.util.debug.Debug;
-
 import org.mpi.vasco.txstore.util.LogicalClock;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.txstore.util.TimeStamp;
+import org.mpi.vasco.util.debug.Debug;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 import java.util.Hashtable;
-import java.util.Vector;
 
 public class UpdateTable {
 
@@ -40,7 +38,7 @@ public class UpdateTable {
 	/*
 	 * need to clean up the lock list
 	 */
-	public void addUpdateTime(String objectId, updateEntry uE, ProxyTxnId txnId) {
+	public updateEntry addUpdateTime(String objectId, updateEntry uE, ProxyTxnId txnId) {
 		updateEntry  v = table.get(objectId);
 		if (v == null){
 			v = uE;
@@ -51,9 +49,14 @@ public class UpdateTable {
 				//table.put(objectId, uE);
 				v.lc = uE.lc;
 				v.ts = uE.ts;
+				if(uE.isDeleted()){
+					Debug.println("this element is already deleted");
+				}
+				v.isdeleted = uE.isdeleted;
 			}
 			v.lockTable.remove(txnId);
 		}
+		return v;
 	}
 
 	public void addUpdateTime(String objectId, updateEntry uE, LogicalClock start) {
@@ -150,5 +153,15 @@ class updateEntry {
 			}
 		}
 		return false;
+	}
+	
+	public String toString(){
+		String _str = "<" + this.lc + "," + this.ts + "," + this.isdeleted + ", {";
+		
+		for(ProxyTxnId txnId : this.lockTable.keySet()){
+			_str += txnId.toString() + ",";
+		}
+		_str += "}>";
+		return _str;
 	}
 }

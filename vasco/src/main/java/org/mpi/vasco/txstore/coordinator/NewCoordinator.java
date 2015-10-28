@@ -169,10 +169,8 @@ public class NewCoordinator extends BaseNode {
 		// insure that one dc doesnt "always win" because another is underloaded
 		setLocalTxn(tmpRec.getFinishTime().getCount());
 		
-		if(!(tmpRec.getShadowOp() instanceof DBSifterEmptyShd)){
-			updateObjectTable(tmpRec.getWriteSet().getWriteSet(), tmpRec.getMergeClock(), 
-				tmpRec.getFinishTime(), tmpRec.getTxnId());
-		}
+		updateObjectTable(tmpRec.getWriteSet().getWriteSet(), tmpRec.getMergeClock(), 
+			tmpRec.getFinishTime(), tmpRec.getTxnId());
 		//if this txn is conflicting, then we need to clean up
 		
 		if(tmpRec.isConflicting()){
@@ -689,19 +687,18 @@ public class NewCoordinator extends BaseNode {
 			ProxyTxnId txnId){
 		synchronized (objectUpdates) {
 			for (int j = 0; j < wse.length; j++) {
+				updateEntry newVersion = null;
 				if(wse[j].isDeleted()){
-					objectUpdates.addUpdateTime(wse[j].getObjectId(),
+					newVersion = objectUpdates.addUpdateTime(wse[j].getObjectId(),
 							new updateEntry(lc, ts, true), txnId);
-					Debug.println("delete object id: " +
-							 wse[j].getObjectId() + " mergedClock: " +
-							 lc + " timestamp: " + ts +  " txnid " + txnId);
-					continue;
+				}else{
+					newVersion = objectUpdates.addUpdateTime(wse[j].getObjectId(),
+							new updateEntry(lc, ts, false), txnId);
 				}
-				objectUpdates.addUpdateTime(wse[j].getObjectId(),
-						new updateEntry(lc, ts, false), txnId);
-				 Debug.println("update object id: " +
-				 wse[j].getObjectId() + " mergedClock: " +
-				 lc + " timestamp: " + ts +  " txnid " + txnId);
+				
+				Debug.println("update object id: " +
+						 wse[j].getObjectId() + " by txnid " + txnId);
+				Debug.println("new clock : " + newVersion.toString());
 			} 
 		}
 	}
