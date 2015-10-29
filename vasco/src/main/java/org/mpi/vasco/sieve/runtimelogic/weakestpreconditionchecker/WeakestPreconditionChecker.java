@@ -51,6 +51,8 @@ public class WeakestPreconditionChecker {
 	
 	static String nonConflictOpName = "nonconflictop";
 	
+	static String readOnlyOpName = "readonly";
+	
 	/**
 	 * Sets the static f pto w ps store.
 	 *
@@ -187,6 +189,10 @@ public class WeakestPreconditionChecker {
 	}
 	
 	public static String getShadowOpName(ShadowOperationCreator shdOpCreator, ShadowOperation shdOp){
+		if(shdOp == null){
+			return readOnlyOpName;
+		}
+		
 		WeakestPrecondition wp = getWeakestPrecondition(shdOpCreator, shdOp);
 		int result = isCoordinationNeeded(wp, shdOp);
 		if(result == 0){

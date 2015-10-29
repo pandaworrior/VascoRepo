@@ -199,11 +199,15 @@ public class NewCoordinator extends BaseNode {
 		txn.setShadowOp(msg.getShadowOperation());
 		txn.addStorage(0);
 		txn.setProxyCommitMessage(msg);
-		//generate lock request and isConflicting flag
-		LockRequest lcRequest = this.getVascoAgent().generateLockRequestFromWriteSet(
-				txn.getOpName(), txn.getTxnId(), txn.getWriteSet());
-		txn.setLcRequest(lcRequest);
-		txn.setConflicting(!(lcRequest == null));
+		
+		if(!txn.isReadonly()){
+			//generate lock request and isConflicting flag
+			LockRequest lcRequest = this.getVascoAgent().generateLockRequestFromWriteSet(
+					txn.getOpName(), txn.getTxnId(), txn.getWriteSet());
+			txn.setLcRequest(lcRequest);
+			txn.setConflicting(!(lcRequest == null));
+		}
+		
 		finishTransaction(txn);
 		/*synchronized(checkObj){
 			checkLatency += System.nanoTime() - startTime;
