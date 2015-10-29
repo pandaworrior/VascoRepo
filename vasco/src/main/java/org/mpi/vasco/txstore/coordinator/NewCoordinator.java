@@ -324,19 +324,20 @@ public class NewCoordinator extends BaseNode {
 				return false;
 			}
 		}else{
-			if(!checkReadCoherence(tmpRec)){
+			/*if(!checkReadCoherence(tmpRec)){
 				//TODO: needed or not?
 				abortTxn(tmpRec);
 				conflictOpReadAbort++;
 				return false;
-			}else{
+			}else{*/
 				//lock all write sets plus
 				if(!checkReadWriteConflicts(tmpRec)){
+					this.unlockObjectsForAbortedConflictTxn(tmpRec);
 					abortTxn(tmpRec);
 					conflictOpWriteAbort++;
 					return false;
 				}
-			}
+			//}
 		}
 		
 		Debug.println("passed coherence check " + tmpRec.getTxnId());
@@ -454,8 +455,7 @@ public class NewCoordinator extends BaseNode {
 						 System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
 								 rsE.getObjectId()); 
 						 System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
-						 System.out.println("u not precedes RE: " +
-						 !u.lc.precedes(rsE.getLogicalClock()));
+						 System.out.println("not precedes RE: " + rsE.getLogicalClock());
 						return false;
 					}
 				}
@@ -594,6 +594,21 @@ public class NewCoordinator extends BaseNode {
 		sendToOtherRemoteCoordinator(rom);
 	}
 	
+	private void unlockObjectsForAbortedConflictTxn(TransactionRecord tmpRec){
+		Debug.println("Unlock all objects that locked by " + tmpRec.getTxnId());
+		//clean up locked items in the update tables
+		WriteSetEntry[] wsEntries = tmpRec.getWriteSet().getWriteSet();
+		int numOfWriteEntries = wsEntries.length;
+		synchronized (objectUpdates) {
+			// first lock all write entries
+			for (int i = 0; i < numOfWriteEntries; i++) {
+				WriteSetEntry wsE = wsEntries[i];
+				updateEntry u = objectUpdates.getUpdates(wsE.getObjectId());
+				u.unlock(tmpRec.getTxnId());
+			}
+		}
+	}
+	
 	/**
 	 * When a conflicting transaction is about to abort, we cannot simply ignore it
 	 * since it already acquires locks, then I need to mimic its commit but without
@@ -603,22 +618,7 @@ public class NewCoordinator extends BaseNode {
 	private void commitConflictingFakedTxn(TransactionRecord tmpRec) {
 		Debug.println("Commit a conflicting abort transaction");
 		
-		//two steps
-		
-		//first clean up locked items in the update tables
-		WriteSetEntry[] wsEntries = tmpRec.getWriteSet().getWriteSet();
-		int numOfWriteEntries = wsEntries.length;
-		synchronized (objectUpdates) {
-			//first lock all write entries
-			for(int i = 0; i < numOfWriteEntries; i++){
-				WriteSetEntry wsE = wsEntries[i];
-				updateEntry u = objectUpdates.getUpdates(wsE
-						.getObjectId());
-				u.unlock(tmpRec.getTxnId());
-			}
-		}
-		
-		//second, send a faked message to remote, and ask remote coordinator to updates the sym/asym meta data
+		//send a faked message to remote, and ask remote coordinator to updates the sym/asym meta data
 		FakedRemoteShadowOpMessage fShMsg = new FakedRemoteShadowOpMessage(tmpRec.getTxnId(),
 				tmpRec.getWriteSet(), tmpRec.getOpName());
 		
