@@ -594,6 +594,11 @@ public class NewCoordinator extends BaseNode {
 		sendToOtherRemoteCoordinator(rom);
 	}
 	
+	/**
+	 * This is required to unlock all objects this aborted conflicting txn wants
+	 * to modify and clean up the protocol it uses.
+	 * @param tmpRec
+	 */
 	private void unlockObjectsForAbortedConflictTxn(TransactionRecord tmpRec){
 		Debug.println("Unlock all objects that locked by " + tmpRec.getTxnId());
 		//clean up locked items in the update tables
@@ -607,6 +612,8 @@ public class NewCoordinator extends BaseNode {
 				u.unlock(tmpRec.getTxnId());
 			}
 		}
+		Debug.println("Let's clean up for this aborted conflicting txn " + tmpRec.getTxnId());
+		this.getVascoAgent().cleanUpLocalOperation(tmpRec.getTxnId(), tmpRec.getLcRequest());
 	}
 	
 	/**
