@@ -49,7 +49,7 @@ public class WeakestPreconditionChecker {
 	/** The random. */
 	static Random random = new Random();
 	
-	static String nonConflictOpName = "nonconflict";
+	static String nonConflictOpName = "nonconflictop";
 	
 	/**
 	 * Sets the static f pto w ps store.

@@ -286,12 +286,14 @@ public class NewCoordinator extends BaseNode {
 	 * check whether you need to have synchronized keyword here
 	 **/
 	private void finishTransaction(TransactionRecord tmpRec) {
-		//acquire the permission here
-		this.getVascoAgent().getPemissions(tmpRec.getTxnId(), tmpRec.getLcRequest());
-		Debug.println("get lock permissions done!");
-		//wait for the permission is matching
-		this.getVascoAgent().waitForBeExecuted(tmpRec.getTxnId(), tmpRec.getLcRequest());
-		Debug.println("start to finalize the transaction");
+		if(!tmpRec.isReadonly()){
+			//acquire the permission here
+			this.getVascoAgent().getPemissions(tmpRec.getTxnId(), tmpRec.getLcRequest());
+			Debug.println("get lock permissions done!");
+			//wait for the permission is matching
+			this.getVascoAgent().waitForBeExecuted(tmpRec.getTxnId(), tmpRec.getLcRequest());
+		}
+		Debug.println("start to finalize the transaction + readonly " + tmpRec.isReadonly() );
 		this.finalizeTransaction(tmpRec);
 	}
 	
