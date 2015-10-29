@@ -131,6 +131,7 @@ public class WeakestPrecondition {
 		for(Formula f : formulaList){
 			_str += f.toString() + " ";
 		}
+		_str += " opName : " + this.simplifiedOpName;
 		return _str;
 	}
 
