@@ -149,6 +149,29 @@ public class AsymCounterMap {
 		}
 	}
 	
+	private void updateGlobalCountForNonBarrierOpByOneIfRemote(Set<String> keys, 
+			String nonBarrierOpName){
+		
+		Debug.println("Update the global count for non-barrier op when this op finishes\n");
+		//read the key list touched by the operation
+		for(String keyStr : keys){
+			//get the meta data map
+			Object2ObjectOpenHashMap<String, AsymCounter> counterSetPerKey = (Object2ObjectOpenHashMap<String, AsymCounter>)this.getCounterMap().get(keyStr);
+			
+			if(counterSetPerKey == null){
+				counterSetPerKey = (Object2ObjectOpenHashMap<String, AsymCounter>) this.initiateCounterSetPerKey(keyStr);
+				this.counterMap.put(keyStr, counterSetPerKey);
+			}
+			
+			AsymCounter nbCounter = counterSetPerKey.get(nonBarrierOpName);
+			if(nbCounter == null){
+				nbCounter = new AsymNonBarrierCounter();
+				counterSetPerKey.put(nonBarrierOpName, nbCounter);
+			}
+			((AsymNonBarrierCounter) nbCounter).completeLocalInstance();
+		}
+	}
+	
 	/**
 	 * Complete local non barrier op clean up.
 	 *
@@ -168,7 +191,7 @@ public class AsymCounterMap {
 	 * @param nonBarrierOpName the non barrier op name
 	 */
 	public void completeRemoteNonBarrierOpCleanUp(Set<String> keys, String nonBarrierOpName){
-		this.updateGlobalCountForNonBarrierOpByOne(keys, nonBarrierOpName);
+		this.updateGlobalCountForNonBarrierOpByOneIfRemote(keys, nonBarrierOpName);
 		//Debug.println("completeRemoteNonBarrierOpCleanUp\n");
 		//this.printOutCounterMap();
 	}
