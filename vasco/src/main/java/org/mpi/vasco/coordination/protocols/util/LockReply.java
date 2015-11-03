@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.mpi.vasco.coordination.VascoServiceAgentFactory;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
+import org.mpi.vasco.util.debug.Debug;
 
 /**
  * The Class LockReply.
@@ -265,7 +266,8 @@ public class LockReply {
 	}
 	
 	public void aggreLockReplies(List<LockReply> lcReplies){
-		if(lcReplies == null || lcReplies.isEmpty()){
+		if(lcReplies == null || lcReplies.isEmpty() || lcReplies.size() <= 1){
+			Debug.println("\t\t\t ----> No need to aggregate all lock replies");
 			return;
 		}else{
 			

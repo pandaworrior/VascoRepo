@@ -70,12 +70,16 @@ public class AsymProtocol extends Protocol{
 		
 		//put lcRequest in the record list
 		this.asymRequestMap.put(txnId, lcRequest);
-		Debug.println("add lc request data for " + txnId.toString());
+		Debug.println("\t\t\t ---->add lc request data for " + txnId.toString());
 		LockReply lcReply = null;
 		
 		String opName = lcRequest.getOpName();
 		Conflict c = this.getMessageClient().getAgent().getConfTable().getConflictByOpName(opName, 
 				Protocol.PROTOCOL_ASYM);
+		
+		//waitlcR
+		List<LockReply> lcReplyList = new ArrayList<LockReply>();
+		this.asymReplyMap.put(txnId, lcReplyList);
 		
 		//check whether if the operation name is the barrier
 		//if the operation name is the barrier, it needs to send the request to all
@@ -89,11 +93,8 @@ public class AsymProtocol extends Protocol{
 			LockReqMessage msg = new LockReqMessage(txnId,
 					client.getMyId(), lcRequest);
 			
-			//waitlcR
-			List<LockReply> lcReplyList = new ArrayList<LockReply>();
-			this.asymReplyMap.put(txnId, lcReplyList);
 			//send the request to all client
-			Debug.println("This is barrier, so send requests to all peers");
+			Debug.println("\t\t\t----->This is barrier, so send requests to all peers");
 			client.sentToAllLockClients(msg);
 			synchronized(lcReplyList){
 				while(lcReplyList.size() != this.getNUM_OF_CLIENTS()){
@@ -118,7 +119,7 @@ public class AsymProtocol extends Protocol{
 			}
 			
 			lcReply = new LockReply(opName, Protocol.PROTOCOL_ASYM, barrierInstances);
-			
+			lcReplyList.add(lcReply);
 			//no barriers to be waiting, then return null
 		}
 		Debug.println("\t\t\tThe final lock reply is " + lcReply.toString());
@@ -298,9 +299,11 @@ public class AsymProtocol extends Protocol{
 		List<LockReply> lcReplyList = this.asymReplyMap.get(txnId);
 		if(lcReplyList == null || lcReplyList.isEmpty()){
 			Debug.println("Lock reply list is null or empty");
+			return;
 		}
 		LockReply lcReply = lcReplyList.get(0);
 		if(lcReply.getBarrierInstancesForWait() == null){
+			Debug.println("\t\t\t----> starting waiting for be executed for barrier");
 			//that is a barrier op
 			//check whether all non-barrier ops it depends on have been applied
 			synchronized(this.counterMap){
@@ -312,7 +315,10 @@ public class AsymProtocol extends Protocol{
 					}
 				}
 			}
+			this.counterMap.printOutCounterMap();
+			Debug.println("\t\t\t<---- end waiting for be executed for barrier");
 		}else{
+			Debug.println("\t\t\t----> starting waiting for be executed for non-barrier");
 			Set<ProxyTxnId> barriers = lcReply.getBarrierInstancesForWait();
 			if(!barriers.isEmpty()){
 				synchronized(this.activeBarriers){
@@ -325,14 +331,14 @@ public class AsymProtocol extends Protocol{
 					}
 					while(!barriers.isEmpty()){
 						try {
-							this.activeBarriers.wait();
+							this.activeBarriers.wait(VascoServiceAgentFactory.RESPONSE_WAITING_TIME_IN_MILL_SECONDS);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
 					}
 				}
 			}
-			//if no barriers to wait, then please immediately execute
+			Debug.println("\t\t\t<---- end waiting for be executed for non-barrier");
 		}
 	}
 
