@@ -187,7 +187,7 @@ public class AsymProtocol extends Protocol{
 	 * Once
 	 */
 	public void cleanUpBarrier(ProxyTxnId txnId, Set<String> keys, String opName){
-		Debug.println("cleanUpBarrier\n");
+		Debug.println("\t\t----->clean up barrier operation " + opName);
 		synchronized(this.counterMap){
 			this.counterMap.completeLocalBarrierOpCleanUp(keys, 
 				opName, txnId);
@@ -196,13 +196,18 @@ public class AsymProtocol extends Protocol{
 			this.activeBarriers.remove(txnId);
 			this.activeBarriers.notifyAll();
 		}
+		this.counterMap.printOutCounterMap();
+		Debug.println("\t\t<-----clean up barrier operation " + opName);
 	}
 	
 	public void cleanUpNonBarrier(Set<String> keys, String opName){
+		Debug.println("\t\t-----> clean up non-barrier operation " + opName);
 		synchronized(this.counterMap){
 			this.counterMap.completeLocalNonBarrierOpCleanUp(keys, 
 				opName);
 		}
+		this.counterMap.printOutCounterMap();
+		Debug.println("\t\t<----- clean up non-barrier operation " + opName);
 	}
 	
 	/*
