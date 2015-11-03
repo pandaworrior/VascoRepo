@@ -93,6 +93,7 @@ public class AsymProtocol extends Protocol{
 			List<LockReply> lcReplyList = new ArrayList<LockReply>();
 			this.asymReplyMap.put(txnId, lcReplyList);
 			//send the request to all client
+			Debug.println("This is barrier, so send requests to all peers");
 			client.sentToAllLockClients(msg);
 			synchronized(lcReplyList){
 				while(lcReplyList.size() != this.getNUM_OF_CLIENTS()){
@@ -120,13 +121,14 @@ public class AsymProtocol extends Protocol{
 			
 			//no barriers to be waiting, then return null
 		}
-		
-		Debug.println("\t\t----->end getting asymprotocol permission");
+		Debug.println("\t\t\tThe final lock reply is " + lcReply.toString());
+		Debug.println("\t\t<-----end getting asymprotocol permission");
 		return lcReply;
 	}
 
 	@Override
 	public void addLockReply(ProxyTxnId txnId, LockReply lcReply) {
+		Debug.println("Received a lock reply " + lcReply.toString());
 		List<LockReply> lcReplyList = this.asymReplyMap.get(txnId);
 		if(lcReplyList == null){
 			throw new RuntimeException("Meta is not initialized " + txnId.toString());
@@ -152,6 +154,7 @@ public class AsymProtocol extends Protocol{
 	// the counter of the counter parts and send it back
 	@Override
 	public LockReply getLocalPermission(ProxyTxnId txnId, LockRequest lcR) {
+		Debug.println("\t\t----->start getting asymprotocol permission for a request");
 		//if the operation is not barrier, then it will check whether barrier exist or not
 		//otherwise, it will first set barrier and then start to send message out
 		String opName = lcR.getOpName();
@@ -174,6 +177,9 @@ public class AsymProtocol extends Protocol{
 				//lcRequest.getKeyList(), c.getConfList(), opName);
 			lcReply = new LockReply(opName, Protocol.PROTOCOL_ASYM, nonBarrierOpCounterMap);
 		}
+		
+		Debug.println("\t\t\t generated a lock reply " + lcReply.toString());
+		Debug.println("\t\t<-----end getting asymprotocol permission for a request");
 		return lcReply;
 	}
 	
