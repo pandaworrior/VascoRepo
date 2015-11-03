@@ -344,8 +344,8 @@ public class AsymCounterMap {
 	}
 	
 	public void printOutCounterMap(){
-		System.out.println("-----------> Beginning of the asym counter Map----------->\n");
+		System.out.println("-----------> Beginning of the asym counter Map----------->");
 		System.out.println(this.getCounterMap().toString());
-		System.out.println("<----------- End of the asym counter Map<---------------\n");
+		System.out.println("<----------- End of the asym counter Map<---------------");
 	}
 }

@@ -154,7 +154,7 @@ public class AsymProtocol extends Protocol{
 	// the counter of the counter parts and send it back
 	@Override
 	public LockReply getLocalPermission(ProxyTxnId txnId, LockRequest lcR) {
-		Debug.println("\t\t----->start getting asymprotocol permission for a request");
+		Debug.println("\t\t----->start getting asymprotocol local permission for a request");
 		//if the operation is not barrier, then it will check whether barrier exist or not
 		//otherwise, it will first set barrier and then start to send message out
 		String opName = lcR.getOpName();
@@ -179,7 +179,7 @@ public class AsymProtocol extends Protocol{
 		}
 		
 		Debug.println("\t\t\t generated a lock reply " + lcReply.toString());
-		Debug.println("\t\t<-----end getting asymprotocol permission for a request");
+		Debug.println("\t\t<-----end getting asymprotocol local permission for a request");
 		return lcReply;
 	}
 	
@@ -295,7 +295,11 @@ public class AsymProtocol extends Protocol{
 
 	@Override
 	public void waitForBeExcuted(ProxyTxnId txnId, LockRequest lcR) {
-		LockReply lcReply = this.getPermission(txnId, lcR);
+		List<LockReply> lcReplyList = this.asymReplyMap.get(txnId);
+		if(lcReplyList == null || lcReplyList.isEmpty()){
+			Debug.println("Lock reply list is null or empty");
+		}
+		LockReply lcReply = lcReplyList.get(0);
 		if(lcReply.getBarrierInstancesForWait() == null){
 			//that is a barrier op
 			//check whether all non-barrier ops it depends on have been applied
