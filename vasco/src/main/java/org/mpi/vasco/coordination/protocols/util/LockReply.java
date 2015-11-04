@@ -274,7 +274,7 @@ public class LockReply {
 			for(String keyStr : this.getKeyCounterMap().keySet()){
 				Map<String, Long> countersPerKey = this.getKeyCounterMap().get(keyStr);
 				for(String opName : countersPerKey.keySet()){
-					long counterValue = countersPerKey.get(opName).longValue();
+					long counterValue = 0L;
 					
 					for(LockReply lcReplyEntry : lcReplies){
 						long cValue = lcReplyEntry.getCounterByName(keyStr, opName);
