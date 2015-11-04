@@ -126,7 +126,7 @@ public class AsymCounterMap {
 	 * @param tableKeyMap the table key map
 	 * @param nonBarrierOpName the non barrier op name
 	 */
-	private void updateGlobalCountForNonBarrierOpByOne(Set<String> keys, 
+	/*private void updateGlobalCountForNonBarrierOpByOne(Set<String> keys, 
 			String nonBarrierOpName){
 		
 		Debug.println("Update the global count for non-barrier op when this op finishes\n");
@@ -147,9 +147,9 @@ public class AsymCounterMap {
 				throw new RuntimeException("key " + keyStr + " not exists!");
 			}
 		}
-	}
+	}*/
 	
-	private void updateGlobalCountForNonBarrierOpByOneIfRemote(Set<String> keys, 
+	private void updateGlobalCountForNonBarrierOpByOne(Set<String> keys, 
 			String nonBarrierOpName){
 		
 		Debug.println("Update the global count for non-barrier op when this op finishes\n");
@@ -181,18 +181,6 @@ public class AsymCounterMap {
 	public void completeLocalNonBarrierOpCleanUp(Set<String> keys, String nonBarrierOpName){
 		this.updateGlobalCountForNonBarrierOpByOne(keys, nonBarrierOpName);
 		//Debug.println("completeLocalNonBarrierOpCleanUp\n");
-		//this.printOutCounterMap();
-	}
-	
-	/**
-	 * Complete remote non barrier op clean up, needed and clean up when the op is propagated.
-	 *
-	 * @param tableKeyMap the table key map
-	 * @param nonBarrierOpName the non barrier op name
-	 */
-	public void completeRemoteNonBarrierOpCleanUp(Set<String> keys, String nonBarrierOpName){
-		this.updateGlobalCountForNonBarrierOpByOneIfRemote(keys, nonBarrierOpName);
-		//Debug.println("completeRemoteNonBarrierOpCleanUp\n");
 		//this.printOutCounterMap();
 	}
 
