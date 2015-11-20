@@ -106,6 +106,7 @@ public class WeakestPreconditionChecker {
 			return null;
 		}
 		List<String> runtimeFingerPrints = shdOpCreator.getFpGenerator().computeFingerPrint(shdOp);
+		Debug.println("generating fingerprint: " + StringOperations.concatStringSplitByDot(runtimeFingerPrints));
 		//System.out.println("Latency to generate fps is: " + computeLatency(startTime) + " for the number of entries " + runtimeFingerPrints.size());
 		//long fetchStartTime = System.nanoTime();
 		WeakestPrecondition wp = mappingFromFPtoWP.fetchWeakestPreconditionByGivenSequenceOfOperations(runtimeFingerPrints);
