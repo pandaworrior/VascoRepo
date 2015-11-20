@@ -116,6 +116,7 @@ public class MessageHandlerServerSide extends BaseNode{
 	//TODO: put synchronization point in the following function due the problem with paxos implementation
 	//the current implementation does not work well with concurrency
 	private void process(LockReqMessage msg){
+		long startTime = System.nanoTime();
 		Debug.printf("Receive from client %d a lock request message %s\n", msg.getGlobalProxyId(), msg.toString());
 		LockRepMessage repMsg = null;
 		if(this.getRsmLockService() == null){
@@ -137,6 +138,8 @@ public class MessageHandlerServerSide extends BaseNode{
 		int clientId = msg.getGlobalProxyId();
 		this.sendToLockClient(repMsg, clientId);
 		Debug.printf("Send to lock client with id %d lock reply message %s", clientId, repMsg.toString());
+		long endTime = System.nanoTime();
+		System.out.println("latency in ms " + ((endTime - startTime) * 0.000001));
 		mf.returnLockReqMessage(msg);
 		mf.returnLockRepMessage(repMsg);
 	}
