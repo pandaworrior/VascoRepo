@@ -197,7 +197,7 @@ public class AsymProtocol extends Protocol{
 			this.activeBarriers.remove(txnId);
 			this.activeBarriers.notifyAll();
 		}
-		this.counterMap.printOutCounterMap();
+		//this.counterMap.printOutCounterMap();
 		Debug.println("\t\t<-----clean up barrier operation " + opName);
 	}
 	
@@ -207,7 +207,7 @@ public class AsymProtocol extends Protocol{
 			this.counterMap.completeLocalNonBarrierOpCleanUp(keys, 
 				opName);
 		}
-		this.counterMap.printOutCounterMap();
+		//this.counterMap.printOutCounterMap();
 		Debug.println("\t\t<----- clean up non-barrier operation " + opName);
 	}
 	
@@ -315,7 +315,7 @@ public class AsymProtocol extends Protocol{
 					}
 				}
 			}
-			this.counterMap.printOutCounterMap();
+			//this.counterMap.printOutCounterMap();
 			Debug.println("\t\t\t<---- end waiting for be executed for barrier");
 		}else{
 			Debug.println("\t\t\t----> starting waiting for be executed for non-barrier");

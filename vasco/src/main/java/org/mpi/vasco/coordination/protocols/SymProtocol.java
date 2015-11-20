@@ -136,9 +136,9 @@ public class SymProtocol extends Protocol{
 		}
 		Debug.println("\t\t<----- end cleanning up [sym]");
 		
-        Debug.println("\t ----> printOut Local Counters");
-        Debug.println(this.countersToString());
-        Debug.println("\t<---- printOut Local Counters");
+        //Debug.println("\t ----> printOut Local Counters");
+        //Debug.println(this.countersToString());
+        //Debug.println("\t<---- printOut Local Counters");
 	}
 	
 	private boolean isCounterMatching(Map<String, Map<String, Long>> keyCounters){
