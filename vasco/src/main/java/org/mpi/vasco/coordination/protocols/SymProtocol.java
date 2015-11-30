@@ -34,10 +34,12 @@ import org.mpi.vasco.coordination.protocols.util.SymMetaData;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.util.debug.Debug;
 
+import bftsmart.tom.ServiceProxy;
+
 /**
  * The Class SymProtocol.
  */
-public class SymProtocol extends Protocol{
+public class SymProtocol implements Protocol{
 	
 	private ConcurrentHashMap<ProxyTxnId, SymMetaData> symMetaDataMap;
 	
@@ -46,6 +48,17 @@ public class SymProtocol extends Protocol{
 	// second level key : opName
 	// second level value : counter for <first_level_key, second_level_key>
     protected Map<String, Map<String, Long>> countersLocalCopy;
+    
+	/** The proxy for communicating between server and client for sym protocol */
+	protected ServiceProxy proxy;
+	
+	public ServiceProxy getProxy(){
+		return this.proxy;
+	}
+	
+	private void setProxy(ServiceProxy p){
+		this.proxy = p;
+	}
 	
 	/**
 	 * Instantiates a new sym protocol.
@@ -53,8 +66,8 @@ public class SymProtocol extends Protocol{
 	 * @param xmlFile the xml file
 	 * @param clientId the client id
 	 */
-	public SymProtocol(MessageHandlerClientSide c) {
-		super(c);
+	public SymProtocol(ServiceProxy p) {
+		this.setProxy(p);
 		this.symMetaDataMap = new ConcurrentHashMap<ProxyTxnId, SymMetaData>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE);
 		this.setCountersLocalCopy(new Object2ObjectOpenHashMap<String, Map<String, Long>>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE));
 	}
@@ -64,35 +77,16 @@ public class SymProtocol extends Protocol{
 	 */
 	@Override
 	public LockReply getPermission(ProxyTxnId txnId, LockRequest lcR) {
-		Debug.println("\t\t------> start getting symprotocol permission");
+		//Debug.println("\t\t------> start getting symprotocol permission");
 		LockReqMessage msg = new LockReqMessage(txnId,
-				client.getMyId(), lcR);
+				this.getProxy().getProcessId(), lcR);
 		SymMetaData meta = this.addInitialMetaData(txnId, lcR);
-		client.sendToLockServer(msg);
-		synchronized(meta){
-			while(meta.getLockReply() == null){
-				try {
-					meta.wait(VascoServiceAgentFactory.RESPONSE_WAITING_TIME_IN_MILL_SECONDS);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		
-		Debug.println("\t\t<------ end getting symprotocol permission");
-		return meta.getLockReply();
-	}
-
-	@Override
-	public void addLockReply(ProxyTxnId txnId, LockReply lcReply) {
-		SymMetaData meta = this.symMetaDataMap.get(txnId);
-		if(meta == null){
-			throw new RuntimeException("Meta for " + txnId.toString() + " doesn't exist");
-		}
-		synchronized(meta){
-			meta.setLockReply(lcReply);
-			meta.notify();
-		}
+		byte[] repliesInBytes = this.getProxy().invokeOrdered(msg.getBytes());
+		LockReply lcReply = new LockReply(repliesInBytes, 0);
+		//Debug.println("\t\t\t received a reply " + lcReply.toString());
+		//Debug.println("\t\t<------ end getting symprotocol permission");
+		meta.setLockReply(lcReply);
+		return lcReply;
 	}
 	
 	public SymMetaData addInitialMetaData(ProxyTxnId txnId, LockRequest lcR){
@@ -129,16 +123,18 @@ public class SymProtocol extends Protocol{
 
 	@Override
 	public void cleanUp(ProxyTxnId txnId, Set<String> keys, String opName) {
-		Debug.println("\t\t-----> start cleanning up [sym]");
+		//Debug.println("\t\t-----> start cleanning up [sym]");
 		this.incrementLocalCounterByOne(keys, opName);
 		if(this.symMetaDataMap.contains(txnId)){
 			this.symMetaDataMap.remove(txnId);
 		}
-		Debug.println("\t\t<----- end cleanning up [sym]");
+		//Debug.println("\t\t<----- end cleanning up [sym]");
 		
-        //Debug.println("\t ----> printOut Local Counters");
-        //Debug.println(this.countersToString());
-        //Debug.println("\t<---- printOut Local Counters");
+		/*
+        Debug.println("\t ----> printOut Local Counters");
+        Debug.println(this.countersToString());
+        Debug.println("\t<---- printOut Local Counters");
+        */
 	}
 	
 	private boolean isCounterMatching(Map<String, Map<String, Long>> keyCounters){
@@ -188,18 +184,20 @@ public class SymProtocol extends Protocol{
 
 	@Override
 	public void waitForBeExcuted(ProxyTxnId txnId, LockRequest lcR) {
-		Debug.println("\t\t----> start waiting for being executed [sym]");
+		//Debug.println("\t\t----> start waiting for being executed [sym]");
 		LockReply lcReply = this.symMetaDataMap.get(txnId).getLockReply();
+		int timesForDebug = 1;
 		synchronized(this.countersLocalCopy){
 			while(!this.isCounterMatching(lcReply.getKeyCounterMap())){
 				try {
 					this.countersLocalCopy.wait(VascoServiceAgentFactory.RESPONSE_WAITING_TIME_IN_MILL_SECONDS);
+					System.out.println("SymWait " + txnId.toString() + " times " + (timesForDebug++));
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
 		}
-		Debug.println("\t\t<---- end waiting for being executed [sym]");
+		//Debug.println("\t\t<---- end waiting for being executed [sym]");
 	}
 
 	public Map<String, Map<String, Long>> getCountersLocalCopy() {
@@ -230,5 +228,11 @@ public class SymProtocol extends Protocol{
         }
         return sb.toString();
     }
+
+	@Override
+	public void addLockReply(ProxyTxnId txnId, LockReply lcReply) {
+		throw new RuntimeException("Should not call addLockReply");
+		
+	}
 
 }

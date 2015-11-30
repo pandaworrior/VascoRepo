@@ -193,7 +193,7 @@ public class DBSelectResult
 			throw new ScratchpadException( "Cannot decode result", e);
 		}
 		
-		Debug.println(toString());
+		//Debug.println(toString());
 	}
 	
 

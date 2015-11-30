@@ -56,7 +56,7 @@ public class MessageHandlerClientSide extends BaseNode{
 	public MessageHandlerClientSide(String membershipFile, Role myRole, int myId) {
 		super(membershipFile, myRole, myId);
 		mf = new MessageFactory();
-		Debug.printf("Set up lock client %d for lock server", myId);
+		System.out.printf("Set up lock client %d for lock server\n", myId);
 	}
 
 	/* (non-Javadoc)
@@ -94,7 +94,7 @@ public class MessageHandlerClientSide extends BaseNode{
 	 * @param msg the msg
 	 */
 	private void process(LockRepMessage msg) {
-		Debug.printf("Receive a lock reply message from server or client content %s \n", msg.toString());
+		//Debug.printf("Receive a lock reply message from server or client content %s \n", msg.toString());
 		LockReply lcReply = msg.getLockRly();
 		int pType = lcReply.getProtocolType();
 		//get either sym or asym protocol
@@ -113,7 +113,7 @@ public class MessageHandlerClientSide extends BaseNode{
 	 * @param msg the msg
 	 */
 	private void process(LockReqMessage msg){
-		Debug.printf("Receive a lock request message from client content %s \n", msg.toString());
+		//Debug.printf("Receive a lock request message from client content %s \n", msg.toString());
 		Protocol p = this.getAgent().getProtocol(Protocol.PROTOCOL_ASYM);
 		if(p == null){
 			throw new RuntimeException("No such a protocol " + Protocol.PROTOCOL_ASYM);
@@ -133,7 +133,7 @@ public class MessageHandlerClientSide extends BaseNode{
 	 * @param msg the msg
 	 */
 	private void process(CleanUpBarrierMessage msg){
-		Debug.printf("Receive a clean up barrier message from client content %s\n", msg.toString());
+		//Debug.printf("Receive a clean up barrier message from client content %s\n", msg.toString());
 		Protocol p = this.getAgent().getProtocol(Protocol.PROTOCOL_ASYM);
 		if(p == null){
 			throw new RuntimeException("No such a protocol " + Protocol.PROTOCOL_ASYM);
@@ -218,6 +218,24 @@ public class MessageHandlerClientSide extends BaseNode{
 		}
 	}
 	
+	public void sendTestSymRequestMessageEveryEpochInBatch(int waitTime, int batchSize){
+		if(batchSize <= 0){
+			throw new RuntimeException("batch size must be positive");
+		}
+		Random random = new Random();
+		while(batchSize > 0){
+			System.out.println("the remaining messages are " + batchSize);
+			this.sendTestSymRequestMessage();
+			try {
+				int randomWaitTime = random.nextInt(waitTime) + 1;
+				Thread.sleep(randomWaitTime);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			batchSize--;
+		}
+	}
+	
 	/**
 	 * Send test a sym request message.
 	 */
@@ -264,7 +282,7 @@ public class MessageHandlerClientSide extends BaseNode{
 		System.out.println("Test the client and server");
 		Scanner keyboard = new Scanner(System.in);
 		while(true){
-			System.out.println("[1] send a sym msg, [2] send a batch of sym, [3] send a asym msg, [4] send a batch of asym, [5] quit"+ "\n");
+			System.out.println("[1] send a sym msg, [2] send a batch of sym, [3] send a batch of sym and every msg for an epoch, [4]send a asym msg, [5] send a batch of asym, [6] quit"+ "\n");
 			int input=keyboard.nextInt();
 			switch(input){
 			case 1:
@@ -278,14 +296,21 @@ public class MessageHandlerClientSide extends BaseNode{
 				this.sendTestSymRequestMessageInBatch(batchSize1);
 				break;
 			case 3:
-				this.sendTestASymRequestMessage();
+				int waitTime = keyboard.nextInt();
+				System.out.println("Send a sym message every " + waitTime + " ms");
+				int batchSize2 = keyboard.nextInt();
+				System.out.println("Send sym message in batch " + batchSize2);
+				this.sendTestSymRequestMessageEveryEpochInBatch(waitTime, batchSize2);
 				break;
 			case 4:
-				int batchSize2 = keyboard.nextInt();
-				System.out.println("Send asym message in batch " + batchSize2);
-				this.sendTestASymRequestMessageInBatch(batchSize2);
+				this.sendTestASymRequestMessage();
 				break;
 			case 5:
+				int batchSize3 = keyboard.nextInt();
+				System.out.println("Send asym message in batch " + batchSize3);
+				this.sendTestASymRequestMessageInBatch(batchSize3);
+				break;
+			case 6:
 				keyboard.close();
 				return;
 			default:
@@ -309,19 +334,11 @@ public class MessageHandlerClientSide extends BaseNode{
 		String membershipFile = args[0];
 		int myId = Integer.parseInt(args[1]);
 		
-		MessageHandlerClientSide mClient = new MessageHandlerClientSide(membershipFile, Role.LOCKCLIENT, myId);
-		// set up for outgoing messages
-		NettyTCPSender sendNet = new NettyTCPSender();
-		mClient.setSender(sendNet);
-		sendNet.setTCPNoDelay(false);
-		sendNet.setKeepAlive(true);
+		VascoServiceAgent vsAgent = VascoServiceAgentFactory.createVascoServiceAgent(membershipFile, myId);
 		
-		int threadCount = 2;
-		ParallelPassThroughNetworkQueue ptnq = new ParallelPassThroughNetworkQueue(
-				mClient, threadCount);
-		NettyTCPReceiver rcv = new NettyTCPReceiver(mClient.getMembership().getMe()
-				.getInetSocketAddress(), ptnq, threadCount);
+		MessageHandlerClientSide mClient = vsAgent.getClient();
 	
+		System.out.println("Client is set up and ready for testing");
 		mClient.test();
 	}
 

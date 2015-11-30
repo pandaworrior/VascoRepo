@@ -104,7 +104,7 @@ public class ExecuteScratchpadFactory implements ScratchpadFactory {
 			unusedLocalSPs.add(createNewSp());
 			totalsp++;
 		}
-		System.err.println("Total scratchpads "+totalsp);
+		System.out.println("Total scratchpads "+totalsp);
 	}
 
 	public ScratchpadInterface createScratchPad(ProxyTxnId txnId) {

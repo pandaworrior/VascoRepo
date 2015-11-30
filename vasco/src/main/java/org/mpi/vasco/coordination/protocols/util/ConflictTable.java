@@ -31,6 +31,7 @@ import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
+import org.mpi.vasco.coordination.VascoServiceAgentFactory;
 import org.mpi.vasco.util.debug.Debug;
 
 /**
@@ -289,7 +290,7 @@ public class ConflictTable {
 	public String toString(){
 		StringBuilder strB = new StringBuilder("");
 		for(int i = 0 ; i < Protocol.NUM_OF_PROTOCOLS; i++){
-			String tagString = Protocol.getProtocolTagString(i);
+			String tagString = VascoServiceAgentFactory.getProtocolTagString(i);
 			strB.append(tagString + "\n");
 			Iterator it = this.conflicts.get(i).entrySet().iterator();
 			while(it.hasNext()){
@@ -306,9 +307,14 @@ public class ConflictTable {
 	 * Prints the out.
 	 */
 	public void printOut(){
+		System.out.println("-----------> Conflict table<---------------\n");
+		System.out.println(this.toString());
+		System.out.println("-----------> End of printing Conflict table <--------------");
+		/*
 		Debug.println("-----------> Conflict table<---------------\n");
 		Debug.println(this.toString());
 		Debug.println("-----------> End of printing Conflict table <--------------");
+		*/
 	}
 	
 	/**

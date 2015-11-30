@@ -233,7 +233,7 @@ public class ClosedLoopProxy extends BaseNode implements ClosedLoopProxyInterfac
 		
     	updateMessageCounter(info,com); // just do statistics
 		transactions.remove(txn);
-		spFactory.releaseScratchpad(tmp);
+		spFactory.releaseScratchpad(tmp, txn);
 		scratchpads.remove(txn);
 		mf.returnBeginTxnMessage(info.bMsg);
 		mf.returnAckCommitTxnMessage(info.ackMsg);
@@ -292,7 +292,7 @@ public class ClosedLoopProxy extends BaseNode implements ClosedLoopProxyInterfac
     	updateMessageCounter(info,com); // just do statistics
 		transactions.remove(txn);
 		scratchpads.remove(txn);
-		spFactory.releaseScratchpad(tmp);
+		spFactory.releaseScratchpad(tmp, txn);
 		mf.returnBeginTxnMessage(info.bMsg);
 		mf.returnAckCommitTxnMessage(info.ackMsg);
 		mf.returnProxyCommitMessage(info.pcMsg);

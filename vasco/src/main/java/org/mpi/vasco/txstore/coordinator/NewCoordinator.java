@@ -456,14 +456,25 @@ public class NewCoordinator extends BaseNode {
 				updateEntry u = objectUpdates.getUpdates(rsE
 						.getObjectId());
 				if(u != null){
-					if((u.isLockedByOtherTransaction(tmpRec.getTxnId())) || 
+					if(u.isLockedByOtherTransaction(tmpRec.getTxnId())){
+						System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
+								 rsE.getObjectId() + " get locked");
+						return false;
+					}else if(u.lc != null && (!u.lc.precedes(rsE.getLogicalClock()))){
+						System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
+								 rsE.getObjectId()); 
+						System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
+						System.out.println("not precedes RE: " + rsE.getLogicalClock());
+						return false;
+					}
+					/*if((u.isLockedByOtherTransaction(tmpRec.getTxnId())) || 
 							(u.lc != null && (!u.lc.precedes(rsE.getLogicalClock())))){
 						 System.out.println("txn" +tmpRec.getTxnId()+" object id: " +
 								 rsE.getObjectId()); 
 						 System.out.println("update to the object: " + u.lc +" " + u.ts.toLong());
 						 System.out.println("not precedes RE: " + rsE.getLogicalClock());
 						return false;
-					}
+					}*/
 				}
 			}
 			

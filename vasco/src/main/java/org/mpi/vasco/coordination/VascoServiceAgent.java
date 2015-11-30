@@ -16,6 +16,8 @@ import org.mpi.vasco.txstore.util.WriteSet;
 import org.mpi.vasco.txstore.util.WriteSetEntry;
 import org.mpi.vasco.util.debug.Debug;
 
+import bftsmart.tom.ServiceProxy;
+
 /**
  * This class is used as the entrance of the
  * vasco and it will contain instances for all protocols
@@ -40,7 +42,7 @@ public class VascoServiceAgent {
 		confTable = new ConflictTable(memFile);
 		
 		protocols = new ArrayList<Protocol>();
-		SymProtocol symProtocol = new SymProtocol(this.client);
+		SymProtocol symProtocol = new SymProtocol(new ServiceProxy(clientId));
 		protocols.add(symProtocol);
 		AsymProtocol asymProtocol = new AsymProtocol(this.client);
 		protocols.add(asymProtocol);

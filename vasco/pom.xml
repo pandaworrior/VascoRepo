@@ -15,13 +15,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-    	<groupId>raft</groupId>
-    	<artifactId>raft</artifactId>
-    	<version>0.3</version>
-        <scope>system</scope>
-        <systemPath>${project.basedir}/lib/jgroups-raft-0.3.jar</systemPath>
-    </dependency>
-    <dependency>
     	<groupId>h2</groupId>
     	<artifactId>h2</artifactId>
     	<scope>system</scope>
@@ -99,25 +92,18 @@
         <systemPath>${project.basedir}/lib/fastutil-7.0.6.jar</systemPath>
     </dependency>
     <dependency>
-    	<groupId>jgroups</groupId>
-    	<artifactId>jgroups</artifactId>
-    	<version>3.6.3</version>
-        <scope>system</scope>
-        <systemPath>${project.basedir}/lib/jgroups-3.6.3.Final.jar</systemPath>
-    </dependency>
-        <dependency>
-    	<groupId>leveldbjni</groupId>
-    	<artifactId>leveldbjni</artifactId>
-    	<version>1.8</version>
-        <scope>system</scope>
-        <systemPath>${project.basedir}/lib/leveldbjni-all-1.8.jar</systemPath>
-    </dependency>
-    <dependency>
     	<groupId>mysql-connector-java</groupId>
     	<artifactId>mysql-connector-java</artifactId>
     	<version>5.1.17</version>
         <scope>system</scope>
         <systemPath>${project.basedir}/lib/mysql-connector-java-5.1.17-bin.jar</systemPath>
+    </dependency>
+    <dependency>
+    	<groupId>bftsmart</groupId>
+    	<artifactId>bftsmart</artifactId>
+    	<version>0</version>
+        <scope>system</scope>
+        <systemPath>${project.basedir}/lib/BFT-SMaRt.jar</systemPath>
     </dependency>
   </dependencies>
   <build>
@@ -137,60 +123,6 @@
       </excludes>
     </configuration>
   </plugin>
-	<plugin>
-		<groupId>org.dstovall</groupId>
-		<artifactId>onejar-maven-plugin</artifactId>
-		<version>1.4.4</version>
-		<executions>
-      <execution>
-        <id>build-first</id>
-          <configuration>
-            <mainClass>org.mpi.vasco.txstore.coordinator.NewCoordinator</mainClass>
-            <attachToBuild>true</attachToBuild>
-            <classifier>onejar</classifier>
-            <filename>coordinator-big.jar</filename>
-          </configuration>
-          <goals>
-            <goal>one-jar</goal>
-          </goals>
-        </execution>
-      <execution>
-        <id>build-second</id>
-          <configuration>
-            <mainClass>org.mpi.vasco.txstore.appextend.MicroStorage</mainClass>
-            <attachToBuild>true</attachToBuild>
-            <classifier>onejar</classifier>
-            <filename>storageshim-big.jar</filename>
-          </configuration>
-          <goals>
-            <goal>one-jar</goal>
-          </goals>
-        </execution>
-         <execution>
-        <id>build-third</id>
-          <configuration>
-            <mainClass>org.mpi.vasco.coordination.protocols.centr.ReplicatedLockService</mainClass>
-            <attachToBuild>true</attachToBuild>
-            <classifier>onejar</classifier>
-            <filename>replicatedlockserver-big.jar</filename>
-          </configuration>
-          <goals>
-            <goal>one-jar</goal>
-          </goals>
-        </execution>
-        <execution>
-        <id>build-fourth</id>
-          <configuration>
-            <attachToBuild>true</attachToBuild>
-            <classifier>onejar</classifier>
-            <filename>vasco-all-big.jar</filename>
-          </configuration>
-          <goals>
-            <goal>one-jar</goal>
-          </goals>
-        </execution>
-      </executions>
-	</plugin>
 </plugins>
 </build>
 

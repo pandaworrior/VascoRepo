@@ -21,7 +21,7 @@ package org.mpi.vasco.util.debug;
 public class Debug {
 
 	/** The debug. */
-	public static boolean debug = true;
+	public static boolean debug = false;
 
 	/** The profile. */
 	public static boolean profile = false;

@@ -16,6 +16,8 @@
  *******************************************************************************/
 package org.mpi.vasco.coordination;
 
+import org.mpi.vasco.coordination.protocols.util.Protocol;
+
 /**
  * A factory for creating VascoServiceAgent objects,
  * and defining all needed config parameters.
@@ -51,6 +53,23 @@ public class VascoServiceAgentFactory {
 	public static void setRESPONSE_WAITING_TIME_IN_MILL_SECONDS(
 			int rESPONSE_WAITING_TIME_IN_MILL_SECONDS) {
 		RESPONSE_WAITING_TIME_IN_MILL_SECONDS = rESPONSE_WAITING_TIME_IN_MILL_SECONDS;
+	}
+	
+	/**
+	 * Gets the protocol tag string.
+	 *
+	 * @param pType the type
+	 * @return the protocol tag string
+	 */
+	public static String getProtocolTagString(int pType){
+		switch(pType){
+		case Protocol.PROTOCOL_ASYM:
+			return "Asymm conflict";
+		case Protocol.PROTOCOL_SYM:
+			return "Symm_conflict";
+			default:
+				throw new RuntimeException("No such protocol type " + pType);
+		}
 	}
 	
 	public static void main(String[] args){

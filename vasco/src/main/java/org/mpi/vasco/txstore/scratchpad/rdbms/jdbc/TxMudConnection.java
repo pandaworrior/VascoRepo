@@ -87,8 +87,9 @@ public class TxMudConnection
 	public void close() throws SQLException {
 		Debug.println("TxMudConnection method close line 59 // TODO review it");
 		//System.out.println("TxMudConnection method close line 59 // TODO review it");
-		//inTx = false;
-		
+		inTx = false;
+		internalAborted = false;
+		color = -1;
 	}
 
 	@Override
@@ -312,6 +313,7 @@ public class TxMudConnection
 		if( ! inTx) {
 			txId = proxy.beginTxn();
 			inTx = true;
+			internalAborted = false;
 			//startTime = TimeMeasurement.getCurrentTimeInNS();
 		}
 		return new TxMudPreparedStatement( sql);
@@ -357,9 +359,15 @@ public class TxMudConnection
 
 	@Override
 	public void rollback() throws SQLException {
+		System.out.println("rollback called by " + txId);
 		inTx = false;
-		if(internalAborted == false)
+		if(internalAborted == false){
+			//if it is not internally aborted, please call it again
 			proxy.abort( txId);
+		}else{
+			//if the commit failes, then this rollback is no-op, since the proxy commit already aborts
+			System.out.println("internally aborted " + txId);
+		}
 		if(shdOp != null && !shdOp.isEmpty()) {
 			shdOp.clear();
 		}
@@ -435,6 +443,7 @@ public class TxMudConnection
 		if( ! inTx) {
 			txId = proxy.beginTxn();
 			inTx = true;
+			internalAborted = false;
 			//startTime = TimeMeasurement.getCurrentTimeInNS();
 		}
 		DBUpdateResult res = DBUpdateResult.createResult(  proxy.execute( op, txId).getResult());
@@ -522,6 +531,7 @@ public class TxMudConnection
 		if( ! inTx) {
 			txId = proxy.beginTxn();
 			inTx = true;
+			internalAborted = false;
 		}
 		/*DBSelectResult res;
 		try {
@@ -542,6 +552,7 @@ public class TxMudConnection
 		if( ! inTx) {
 			txId = proxy.beginTxn();
 			inTx = true;
+			internalAborted = false;
 		}
 		//make it deterministic
 		String[] updateStatements = null;

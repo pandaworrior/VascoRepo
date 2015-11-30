@@ -21,11 +21,13 @@ import java.util.Set;
 import org.mpi.vasco.coordination.MessageHandlerClientSide;
 import org.mpi.vasco.txstore.util.ProxyTxnId;
 
+import bftsmart.tom.ServiceProxy;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class Protocol.
  */
-public abstract class Protocol {
+public interface Protocol {
 	
 	/** The Constant NUM_OF_PROTOCOLS. */
 	public final static int NUM_OF_PROTOCOLS = 2;
@@ -35,19 +37,6 @@ public abstract class Protocol {
 	
 	/** The Constant PROTOCOL_ASYM. */
 	public final static int PROTOCOL_ASYM = 1;
-	
-	
-	/** The client. */
-	protected MessageHandlerClientSide client;
-	
-	/**
-	 * Instantiates a new protocol.
-	 *
-	 * @param c the c
-	 */
-	public Protocol(MessageHandlerClientSide c){
-		this.setClient(c);
-	}
 	
 	/**
 	 * Gets the permission for executing an operation.
@@ -91,40 +80,5 @@ public abstract class Protocol {
 	 */
 	public abstract void cleanUpLocal(ProxyTxnId txnId, Set<String> keys, String opName);
 	
-	/**
-	 * Sets the client.
-	 *
-	 * @param client the new clientlcR
-	 */
-	public void setClient(MessageHandlerClientSide client){
-		this.client = client;
-	}
-	
-	/**
-	 * Gets the message client.
-	 *
-	 * @return the message client
-	 */
-	public MessageHandlerClientSide getMessageClient(){
-		return client;
-	}
-	
 	//public abstract void waitForPermissionLocalMatch();
-	
-	/**
-	 * Gets the protocol tag string.
-	 *
-	 * @param pType the type
-	 * @return the protocol tag string
-	 */
-	public static String getProtocolTagString(int pType){
-		switch(pType){
-		case Protocol.PROTOCOL_ASYM:
-			return "Asymm conflict";
-		case Protocol.PROTOCOL_SYM:
-			return "Symm_conflict";
-			default:
-				throw new RuntimeException("No such protocol type " + pType);
-		}
-	}
 }

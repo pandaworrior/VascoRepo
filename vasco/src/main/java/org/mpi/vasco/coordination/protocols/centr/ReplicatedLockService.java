@@ -1,162 +1,189 @@
 package org.mpi.vasco.coordination.protocols.centr;
 
-import org.jgroups.JChannel;
-import org.jgroups.ReceiverAdapter;
-import org.jgroups.View;
-import org.jgroups.protocols.raft.*;
-import org.jgroups.util.Util;
-import org.mpi.vasco.coordination.membership.Role;
-import org.mpi.vasco.coordination.protocols.centr.rsm.CounterService;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import org.mpi.vasco.coordination.VascoServiceAgentFactory;
+import org.mpi.vasco.coordination.protocols.messages.LockReqMessage;
 import org.mpi.vasco.coordination.protocols.util.ConflictTable;
+import org.mpi.vasco.coordination.protocols.util.LockReply;
+import org.mpi.vasco.coordination.protocols.util.LockRequest;
+import org.mpi.vasco.coordination.protocols.util.Protocol;
+import org.mpi.vasco.util.debug.Debug;
 
-/**
- * Demo of CounterService. When integrating with JGroups, this class should be removed and the original demo in JGroups
- * should be modified to accept different CounterService implementations.
- */
-public class ReplicatedLockService {
-    protected JChannel       ch;
-    protected CounterService counter_service;
-    protected MessageHandlerServerSide server_for_clients;
+import bftsmart.tom.MessageContext;
+import bftsmart.tom.ServiceReplica;
+import bftsmart.tom.server.defaultservices.DefaultRecoverable;
 
-    void start(String props, String name, long repl_timeout, boolean follower, String xmlFile, int myId) throws Exception {
-        ch=new JChannel(props).name(name);
-        counter_service=new CounterService(ch).raftId(name).replTimeout(repl_timeout);
-        if(follower)
-            disableElections(ch);
-        ch.setReceiver(new ReceiverAdapter() {
-            public void viewAccepted(View view) {
-                System.out.println("-- view: " + view);
-            }
-        });
+public class ReplicatedLockService extends DefaultRecoverable{
+	
+	//data here
+	private boolean logPrinted = false;
+    protected ConflictTable conflictTable;
 
-        //try {
-            ch.connect("cntrs");
-            //loop();
-        //}
-        //finally {
-          //  Util.close(ch);
-        //}
-        
-        //set the conflictable
-        counter_service.setConflictTable(new ConflictTable(xmlFile));
-        
-        //set the lock server
-        server_for_clients = new MessageHandlerServerSide(xmlFile, Role.LOCKSERVER, myId);
-        server_for_clients.setUp();
-        server_for_clients.setRsmLockService(this.counter_service);
-        System.out.println("Replicated Lock Server is already set up!");
+    // first level { key: table name + key, value : a set of counters for operations}
+    // second level { key: conflicting operation name, values: counter value}
+    protected HashMap<String, HashMap<String, Long>> counters;
+    
+    public void setConflictTable(ConflictTable _cTable){
+    	this.conflictTable = _cTable;
+    	Debug.println("Already set conflict table \n");
+    	this.conflictTable.printOut();
     }
-
-
-
-    /*protected void loop() throws Exception {
-        boolean looping=true;
-        while(looping) {
-            try {
-                int key=Util.keyPress("[1] GetAndUpdate [2] Decrement [3] Compare and set [4] Dump log\n" +
-                                        "[8] Snapshot [9] Increment N times [x] Exit\n" +
-                                        "first-applied=" + firstApplied() +
-                                        ", last-applied=" + counter_service.lastApplied() +
-                                        ", commit-index=" + counter_service.commitIndex() +
-                                        ", log size=" + Util.printBytes(logSize()) + "\n");
-
-                switch(key) {
-                    case '1':
-                        long val=counter.incrementAndGet();
-                        System.out.printf("%s: %s\n", counter.getName(), val);
-                        break;
-                    case '2':
-                        val=counter.decrementAndGet();
-                        System.out.printf("%s: %s\n", counter.getName(), val);
-                        break;
-                    case '3':
-                        long expect=Util.readLongFromStdin("expected value: ");
-                        long update=Util.readLongFromStdin("update: ");
-                        if(counter.compareAndSet(expect, update)) {
-                            System.out.println("-- set counter \"" + counter.getName() + "\" to " + update + "\n");
-                        }
-                        else {
-                            System.err.println("failed setting counter \"" + counter.getName() + "\" from " + expect +
-                                                 " to " + update + ", current value is " + counter.get() + "\n");
-                        }
-                        break;
-                    case '4':
-                        dumpLog();
-                        break;
-                    case '8':
-                        counter_service.snapshot();
-                        break;
-                    case '9':
-                        int NUM=Util.readIntFromStdin("num: ");
-                        System.out.println("");
-                        int print=NUM / 10;
-                        long retval=0;
-                        long start=System.currentTimeMillis();
-                        for(int i=0; i < NUM; i++) {
-                            retval=counter.incrementAndGet();
-                            if(i > 0 && i % print == 0)
-                                System.out.println("-- count=" + retval);
-                        }
-                        long diff=System.currentTimeMillis() - start;
-                        System.out.println("\n" + NUM + " incrs took " + diff + " ms; " + (NUM / (diff / 1000.0)) + " ops /sec\n");
-                        break;
-                    case 'x':
-                        looping=false;
-                        break;
-                    case '\n':
-                        System.out.println(counter.getName() + ": " + counter.get() + "\n");
-                        break;
-                }
-            }
-            catch(Throwable t) {
-                System.err.println(t.toString());
-            }
+    
+    public ConflictTable getConflictTable(){
+    	return this.conflictTable;
+    }
+    
+    public String countersToString() {
+        StringBuilder sb=new StringBuilder();
+        for(Entry<String, HashMap<String, Long>> fstLEntry: counters.entrySet()) {
+        	sb.append("key: " + fstLEntry.getKey() + "\n");
+        	sb.append("{");
+        	for(Map.Entry<String, Long> sndLEntry : fstLEntry.getValue().entrySet()){
+        		sb.append("op: " + sndLEntry.getKey() + ",");
+        		sb.append(" value: ");
+        		sb.append(sndLEntry.getValue().longValue());
+        	}
+        	sb.append("}\n");
         }
-    }*/
+        return sb.toString();
+    }
+	
+	public ReplicatedLockService(int id, String xmlFile){
+		//set the conflictable
+        this.setConflictTable(new ConflictTable(xmlFile));
+        this.setCounters(new HashMap<String, HashMap<String, Long>>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE));
+		new ServiceReplica(id, this, this);
+		System.out.println("Replicated Lock Server "+ id +" is already set up!");
+	}
+	
 
-    /*protected void dumpLog() {
-        System.out.println("\nindex (term): command\n---------------------");
-        counter_service.dumpLog();
-        System.out.println("");
-    }*/
+	@Override
+	public byte[] executeUnordered(byte[] arg0, MessageContext arg1) {
+		throw new RuntimeException("Should not call executeUnordered");
+	}
 
-    protected int firstApplied() {
-        RAFT raft=(RAFT)ch.getProtocolStack().findProtocol(RAFT.class);
-        return raft.log().firstAppended();
+	@Override
+	public byte[][] appExecuteBatch(byte[][] commands, MessageContext[] msgCtx) {
+		byte[][] replies = new byte[commands.length][];
+		int index = 0;
+    	for(byte[] command: commands) {
+    		if(msgCtx != null && msgCtx[index] != null && msgCtx[index].getConsensusId() % 1000 == 0 && !logPrinted) {
+    			System.out.println("Replicated Lock Server executing eid: " + msgCtx[index].getConsensusId());
+    			logPrinted = true;
+    		} else
+    			logPrinted = false;
+    		
+    		LockReqMessage lockRequestMsg = new LockReqMessage(command);
+    		LockReply lcReply = this._getAndAdd(lockRequestMsg.getLockReq());
+    		replies[index++] = lcReply.getBytes();
+    	}
+		return replies;
+	}
+
+	@Override
+	public byte[] getSnapshot() {
+		try {
+			System.out.println("getState called");
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			ObjectOutput out = new ObjectOutputStream(bos);
+			out.writeObject(this.getCounters());
+			out.flush();
+			bos.flush();
+			out.close();
+			bos.close();
+			return bos.toByteArray();
+		} catch (IOException ioe) {
+			System.err.println("[ERROR] Error serializing state: "
+					+ ioe.getMessage());
+			return "ERROR".getBytes();
+		}
+	}
+
+	@Override
+	public void installSnapshot(byte[] state) {
+		try {
+			System.out.println("setState called");
+			ByteArrayInputStream bis = new ByteArrayInputStream(state);
+			ObjectInput in = new ObjectInputStream(bis);
+			try {
+				HashMap<String, HashMap<String, Long>> recoveredCounter = (HashMap<String, HashMap<String, Long>>) in.readObject();
+				this.setCounters(recoveredCounter);
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+			in.close();
+			bis.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	//{compoundKey, {(countername, longvalue)}
+    protected LockReply _getAndAdd(LockRequest lrRequest) {
+    	//Debug.println("Execute get and add for request " + lrRequest.toString() + "\n");
+    	LockReply lcReply = new LockReply(lrRequest.getOpName(), Protocol.PROTOCOL_SYM);
+    	//get a list of conflicts:
+    	Set<String> conflicts = this.conflictTable.getConflictByOpName(lrRequest.getOpName(), Protocol.PROTOCOL_SYM).getConfList();
+    	
+        synchronized(counters) {
+        	for(String keyStr : lrRequest.getKeyList()){
+        		HashMap<String, Long> countersPerKey = this.getCounters().get(keyStr);
+        		if(countersPerKey == null){
+        			countersPerKey = new HashMap<String, Long>(VascoServiceAgentFactory.SMALL_MAP_INITIAL_SIZE);
+        			this.counters.put(keyStr, countersPerKey);
+        		}
+        		for(String conflictStr : conflicts){
+    				Long counter = countersPerKey.get(conflictStr);
+        			if(counter == null){
+        				lcReply.addKeyCounterPair(keyStr, conflictStr, 0L);
+        				countersPerKey.put(conflictStr, 1L);
+        			}else{
+        				lcReply.addKeyCounterPair(keyStr, conflictStr, counter.longValue());
+        				countersPerKey.put(conflictStr, counter.longValue() + 1L);
+        			}
+    			}
+        	}
+        }
+        //Debug.println("\t ----> printOutCounters");
+        //Debug.println(this.countersToString());
+        //Debug.println("\t<---- printOutCounters");
+        return lcReply;
     }
 
-    protected int logSize() {
-        return counter_service.logSize();
-    }
+	public HashMap<String, HashMap<String, Long>> getCounters() {
+		return counters;
+	}
 
-    protected static void disableElections(JChannel ch) {
-        ELECTION election=(ELECTION)ch.getProtocolStack().findProtocol(ELECTION.class);
-        if(election != null)
-            election.noElections(true);
-    }
-
-
-
-    public static void main(final String[] args) throws Exception {
-    	if(args.length != 6){
+	public void setCounters(HashMap<String, HashMap<String, Long>> counters) {
+		this.counters = counters;
+	}
+	
+	public static void main(final String[] args) throws Exception {
+    	if(args.length != 2){
     		help();
     		return;
     	}
     	
-    	String raftFile = args[0];
-    	String raftName = args[1];
-    	long repl_timeout = Long.parseLong(args[2]);
-    	boolean follower = Boolean.parseBoolean(args[3]);
-    	String serverclientXml = args[4];
-    	int myId = Integer.parseInt(args[5]);
-        new ReplicatedLockService().start(raftFile, raftName, repl_timeout, follower, serverclientXml, myId);
+    	String xmlFile = args[0];
+    	int myId = Integer.parseInt(args[1]);
+        new ReplicatedLockService(myId, xmlFile);
 
     }
 
     private static void help() {
-        System.out.println("ReplicatedLockService [raftfile] [raftname] " +
-                             "[timeout] [follower(true or false)] [serverclientxmlfile] [myId]");
+        System.out.println("ReplicatedLockService [serverclientconflictxmlfile] [myId]");
     }
-
 
 }
