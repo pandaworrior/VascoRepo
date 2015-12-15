@@ -43,6 +43,8 @@ public class SymProtocol implements Protocol{
 	
 	private ConcurrentHashMap<ProxyTxnId, SymMetaData> symMetaDataMap;
 	
+	private int clientId;
+	
 	//locally maintain a copy of data on the centralized server
 	// first level key : tablename + primary key
 	// second level key : opName
@@ -50,14 +52,12 @@ public class SymProtocol implements Protocol{
     protected Map<String, Map<String, Long>> countersLocalCopy;
     
 	/** The proxy for communicating between server and client for sym protocol */
-	protected ServiceProxy proxy;
+	protected ServiceProxy[] proxies;
 	
-	public ServiceProxy getProxy(){
-		return this.proxy;
-	}
+	public static int NUM_OF_BFTSMART_PROXY = 20;
 	
-	private void setProxy(ServiceProxy p){
-		this.proxy = p;
+	public ServiceProxy getProxy(int thrdId){
+		return this.proxies[thrdId % NUM_OF_BFTSMART_PROXY];
 	}
 	
 	/**
@@ -66,8 +66,12 @@ public class SymProtocol implements Protocol{
 	 * @param xmlFile the xml file
 	 * @param clientId the client id
 	 */
-	public SymProtocol(ServiceProxy p) {
-		this.setProxy(p);
+	public SymProtocol(int cId) {
+		this.proxies = new ServiceProxy[NUM_OF_BFTSMART_PROXY];
+		for(int i = 0 ; i < NUM_OF_BFTSMART_PROXY; i++){
+			this.proxies[i] = new ServiceProxy(cId * NUM_OF_BFTSMART_PROXY + i);
+		}
+		this.clientId = cId;
 		this.symMetaDataMap = new ConcurrentHashMap<ProxyTxnId, SymMetaData>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE);
 		this.setCountersLocalCopy(new Object2ObjectOpenHashMap<String, Map<String, Long>>(VascoServiceAgentFactory.BIG_MAP_INITIAL_SIZE));
 	}
@@ -79,9 +83,10 @@ public class SymProtocol implements Protocol{
 	public LockReply getPermission(ProxyTxnId txnId, LockRequest lcR) {
 		//Debug.println("\t\t------> start getting symprotocol permission");
 		LockReqMessage msg = new LockReqMessage(txnId,
-				this.getProxy().getProcessId(), lcR);
+				this.clientId, lcR);
 		SymMetaData meta = this.addInitialMetaData(txnId, lcR);
-		byte[] repliesInBytes = this.getProxy().invokeOrdered(msg.getBytes());
+		int threadId = (int)Thread.currentThread().getId();
+		byte[] repliesInBytes = this.getProxy(threadId).invokeOrdered(msg.getBytes());
 		LockReply lcReply = new LockReply(repliesInBytes, 0);
 		//Debug.println("\t\t\t received a reply " + lcReply.toString());
 		//Debug.println("\t\t<------ end getting symprotocol permission");
@@ -90,7 +95,7 @@ public class SymProtocol implements Protocol{
 	}
 	
 	public SymMetaData addInitialMetaData(ProxyTxnId txnId, LockRequest lcR){
-		Debug.println("Initially added " + txnId.toString());
+		//Debug.println("Initially added " + txnId.toString());
 		SymMetaData meta = new SymMetaData(lcR, null);
 		this.symMetaDataMap.put(txnId, meta);
 		return meta;
@@ -191,7 +196,11 @@ public class SymProtocol implements Protocol{
 			while(!this.isCounterMatching(lcReply.getKeyCounterMap())){
 				try {
 					this.countersLocalCopy.wait(VascoServiceAgentFactory.RESPONSE_WAITING_TIME_IN_MILL_SECONDS);
+					String missingCounters = convertCountersToString(lcReply.getKeyCounterMap());
 					System.out.println("SymWait " + txnId.toString() + " times " + (timesForDebug++));
+					System.out.println("missing counters ---------------->");
+					System.out.println(missingCounters);
+					System.out.println("<------------------ missing counters");
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -225,6 +234,23 @@ public class SymProtocol implements Protocol{
         		sb.append(sndLEntry.getValue().longValue());
         	}
         	sb.append("}\n");
+        }
+        return sb.toString();
+    }
+	
+	public static String convertCountersToString(Map<String, Map<String, Long>> keyCounters) {
+        StringBuilder sb=new StringBuilder();
+        if(keyCounters != null && !keyCounters.isEmpty()){
+	        for(Map.Entry<String, Map<String, Long>> fstLEntry: keyCounters.entrySet()) {
+	        	sb.append("key: " + fstLEntry.getKey() + "\n");
+	        	sb.append("{");
+	        	for(Map.Entry<String, Long> sndLEntry : fstLEntry.getValue().entrySet()){
+	        		sb.append("op: " + sndLEntry.getKey() + ",");
+	        		sb.append(" value: ");
+	        		sb.append(sndLEntry.getValue().longValue());
+	        	}
+	        	sb.append("}\n");
+	        }
         }
         return sb.toString();
     }

@@ -27,7 +27,7 @@ public class VascoServiceAgentFactory {
 	/** The response waiting time in mill seconds. 
 	 * Normally set to the largest rtt latency between two data centers
 	 * */
-	public static int RESPONSE_WAITING_TIME_IN_MILL_SECONDS = 1;
+	public static int RESPONSE_WAITING_TIME_IN_MILL_SECONDS = 200;
 	
 	public static int BIG_MAP_INITIAL_SIZE = 10000;
 	
