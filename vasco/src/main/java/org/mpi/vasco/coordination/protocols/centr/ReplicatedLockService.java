@@ -36,7 +36,7 @@ public class ReplicatedLockService extends DefaultRecoverable{
     
     public void setConflictTable(ConflictTable _cTable){
     	this.conflictTable = _cTable;
-    	Debug.println("Already set conflict table \n");
+    	System.out.println("Already set conflict table \n");
     	this.conflictTable.printOut();
     }
     
@@ -47,12 +47,12 @@ public class ReplicatedLockService extends DefaultRecoverable{
     public String countersToString() {
         StringBuilder sb=new StringBuilder();
         for(Entry<String, HashMap<String, Long>> fstLEntry: counters.entrySet()) {
-        	sb.append("key: " + fstLEntry.getKey() + "\n");
+        	sb.append("key: " + fstLEntry.getKey() + ", ");
         	sb.append("{");
         	for(Map.Entry<String, Long> sndLEntry : fstLEntry.getValue().entrySet()){
-        		sb.append("op: " + sndLEntry.getKey() + ",");
+        		sb.append("op: " + sndLEntry.getKey() + ", ");
         		sb.append(" value: ");
-        		sb.append(sndLEntry.getValue().longValue());
+        		sb.append(sndLEntry.getValue().longValue() + " ");
         	}
         	sb.append("}\n");
         }
@@ -145,20 +145,28 @@ public class ReplicatedLockService extends DefaultRecoverable{
         			this.counters.put(keyStr, countersPerKey);
         		}
         		for(String conflictStr : conflicts){
-    				Long counter = countersPerKey.get(conflictStr);
-        			if(counter == null){
+    				Long counterRightOp = countersPerKey.get(conflictStr);
+        			if(counterRightOp == null){
         				lcReply.addKeyCounterPair(keyStr, conflictStr, 0L);
-        				countersPerKey.put(conflictStr, 1L);
         			}else{
-        				lcReply.addKeyCounterPair(keyStr, conflictStr, counter.longValue());
-        				countersPerKey.put(conflictStr, counter.longValue() + 1L);
+        				lcReply.addKeyCounterPair(keyStr, conflictStr, counterRightOp.longValue());
         			}
     			}
+        		
+        		//update the counter pointed by the opName
+        		
+        		Long counterLeftOp = countersPerKey.get(lrRequest.getOpName());
+        		if(counterLeftOp == null){
+        			counterLeftOp = new Long(0L);
+        		}
+        		countersPerKey.put(keyStr, counterLeftOp.longValue() + 1);
         	}
         }
         //Debug.println("\t ----> printOutCounters");
         //Debug.println(this.countersToString());
         //Debug.println("\t<---- printOutCounters");
+        //System.out.println("\t lc request " + lrRequest.toString());
+        //System.out.println("\t\t" + this.countersToString());
         return lcReply;
     }
 
