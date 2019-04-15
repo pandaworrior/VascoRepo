@@ -110,6 +110,11 @@
   <plugins>
   <plugin>
     <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-surefire-plugin</artifactId>
+    <version>3.0.0-M2</version>
+  </plugin>
+  <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-compiler-plugin</artifactId>
     <version>3.2</version>
     <configuration>
@@ -125,11 +130,15 @@
   </plugin>
 </plugins>
 </build>
-
+<!--
 <pluginRepositories>
-        <pluginRepository>
+  <pluginRepository>
     <id>onejar-maven-plugin.googlecode.com</id>
-    <url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo/</url>
-</pluginRepository>
-    </pluginRepositories>
+    <url>https://github.com/jolira/onejar-maven-plugin/</url>
+  </pluginRepository>
+</pluginRepositories>
+-->
+
+<repositories> <repository> <id>nexus-aliyun</id> <name>Nexus aliyun</name> <url>http://maven.aliyun.com/nexus/content/groups/public</url> </repository> </repositories>
+
 </project>

@@ -139,7 +139,6 @@ public class TxMudConnection
 	/**
 	 * added by chengli for shadow operation commit
 	 * @param op
-	 * @param color
 	 * @throws SQLException
 	 */
 	public void commit(DBShadowOperation op) throws SQLException {

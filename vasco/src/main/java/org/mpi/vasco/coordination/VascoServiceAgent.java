@@ -42,7 +42,8 @@ public class VascoServiceAgent {
 		confTable = new ConflictTable(memFile);
 		
 		protocols = new ArrayList<Protocol>();
-		SymProtocol symProtocol = new SymProtocol(new ServiceProxy(clientId));
+		//SymProtocol symProtocol = new SymProtocol(new ServiceProxy(clientId));
+                SymProtocol symProtocol = new SymProtocol(clientId);
 		protocols.add(symProtocol);
 		AsymProtocol asymProtocol = new AsymProtocol(this.client);
 		protocols.add(asymProtocol);
