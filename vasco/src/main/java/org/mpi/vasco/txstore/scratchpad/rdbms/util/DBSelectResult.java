@@ -258,6 +258,22 @@ public class DBSelectResult
 		}
 		return Integer.parseInt(result.get(nextLine - 1)[col-1]);
 	}
+	
+	/**
+	 * Emulate getLong method in ResultSet. NOTE: col from 1 to number of columns
+	 * @param col
+	 * @return
+	 * @throws ScratchpadException
+	 */
+	public long getLong( int col)  throws ScratchpadException {
+		if( ! hasDecoded)
+			decode();
+		if(result.get(nextLine-1).length < col){
+			System.out.println("size of result is " + result.get(nextLine-1).length);
+		}
+		return Long.parseLong(result.get(nextLine - 1)[col-1]);
+	}
+	
 	/**
 	 * Emulate getDouble method in ResultSet. NOTE: col from 1 to number of columns
 	 * @param col

@@ -370,6 +370,7 @@ public class TxMudConnection
 		if(shdOp != null && !shdOp.isEmpty()) {
 			shdOp.clear();
 		}
+		throw new RuntimeException();
 	}
 
 	@Override
@@ -1071,13 +1072,17 @@ public class TxMudConnection
 
 		@Override
 		public long getLong(int arg0) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 638");
-			return 0;
+			try {
+				return res.getLong(arg0);
+			} catch (ScratchpadException e) {
+				throw new SQLException( e);
+			}
 		}
 
 		@Override
 		public long getLong(String arg0) throws SQLException {
 			System.out.println(" // TODO Auto-generated method stub 639");
+			
 			return 0;
 		}
 
@@ -2552,37 +2557,37 @@ public class TxMudConnection
 
 		@Override
 		public void setObject(int arg0, Object arg1, int arg2) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 832");
 			
 		}
 
 		@Override
 		public void setObject(int arg0, Object arg1, int arg2, int arg3) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 833");
 			
 		}
 
 		@Override
 		public void setRef(int arg0, Ref arg1) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 834");
 			
 		}
 
 		@Override
 		public void setRowId(int arg0, RowId arg1) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 835");
 			
 		}
 
 		@Override
 		public void setSQLXML(int arg0, SQLXML arg1) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 836");
 			
 		}
 
 		@Override
 		public void setShort(int arg0, short arg1) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 837");
 			
 		}
 
@@ -2593,13 +2598,13 @@ public class TxMudConnection
 
 		@Override
 		public void setTime(int arg0, Time arg1) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 838");
 			
 		}
 
 		@Override
 		public void setTime(int arg0, Time arg1, Calendar arg2) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 839");
 			
 		}
 
@@ -2610,56 +2615,56 @@ public class TxMudConnection
 
 		@Override
 		public void setTimestamp(int arg0, Timestamp arg1, Calendar arg2) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 840");
 		}
 
 		@Override
 		public void setURL(int arg0, URL arg1) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 841");
 			
 		}
 
 		@Override
 		public void setUnicodeStream(int arg0, InputStream arg1, int arg2) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 831");
+			System.out.println(" // TODO Auto-generated method stub 8311");
 			
 		}
 
 		public void closeOnCompletion() throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 832");
+			System.out.println(" // TODO Auto-generated method stub 8321");
 			
 		}
 
 		public boolean isCloseOnCompletion() throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 833");
+			System.out.println(" // TODO Auto-generated method stub 8331");
 			return false;
 		}
 		
 	}
 
 	public void abort(Executor executor) throws SQLException {
-		System.out.println(" // TODO Auto-generated method stub 834");
+		System.out.println(" // TODO Auto-generated method stub 8341");
 		
 	}
 
 	public int getNetworkTimeout() throws SQLException {
-		System.out.println(" // TODO Auto-generated method stub 835");
+		System.out.println(" // TODO Auto-generated method stub 8351");
 		return 0;
 	}
 
 	public String getSchema() throws SQLException {
-		System.out.println(" // TODO Auto-generated method stub 836");
+		System.out.println(" // TODO Auto-generated method stub 8361");
 		return null;
 	}
 
 	public void setNetworkTimeout(Executor executor, int milliseconds)
 			throws SQLException {
-		System.out.println(" // TODO Auto-generated method stub 837");
+		System.out.println(" // TODO Auto-generated method stub 8371");
 		
 	}
 
 	public void setSchema(String schema) throws SQLException {
-		System.out.println(" // TODO Auto-generated method stub 838");
+		System.out.println(" // TODO Auto-generated method stub 8381");
 		
 	}
 
