@@ -132,7 +132,7 @@ public class ShadowOperationCreator {
 	 * @return the connection
 	 */
 	public Connection createRealConnection(String propertiesStr, String userName, String password) {
-		Debug.println("Create real connection for initialized id factory, propertiesStr: " +propertiesStr);
+		Debug.println("Create real connection for initialized id factory, propertiesStr: " +propertiesStr + " userName: " + userName + " pass: " + password);
 		Connection originalConn = null;
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
