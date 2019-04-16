@@ -290,11 +290,21 @@ public class CrdtFactory {
 			}
 		case NUMDELTAFLOAT:
 			if(rs != null) {
-				rs.beforeFirst();
-				rs.next();
-				float finalFValue =  Float.parseFloat(value);
-				float oldFValue = rs.getFloat(df.get_Data_Field_Name());
-				float fDelta = finalFValue - oldFValue;
+				float finalFValue = -1;
+				float oldFValue = -1;
+				float fDelta = -1;
+				if(value.contains("+")) {
+					fDelta = Float.parseFloat(value.substring(value.indexOf('+') + 1));
+				}else if(value.contains("-")) {
+					fDelta = -1f * Float.parseFloat(value.substring(value.indexOf('-') + 1));
+				}else {
+					rs.beforeFirst();
+					rs.next();
+					finalFValue =  Float.parseFloat(value);
+					oldFValue = rs.getFloat(df.get_Data_Field_Name());
+					fDelta = finalFValue - oldFValue;
+				}
+				Debug.println("Delta identified is " + fDelta);
 				return new NumberDeltaFloat(df.get_Data_Field_Name(), fDelta);
 			}else {
 				return new NumberDeltaFloat(df.get_Data_Field_Name(), Float.parseFloat(value)); 
