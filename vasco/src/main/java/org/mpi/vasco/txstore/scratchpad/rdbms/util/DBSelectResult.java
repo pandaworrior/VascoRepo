@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 import java.io.*;
+import java.sql.Timestamp;
 
 import org.mpi.vasco.txstore.scratchpad.ScratchpadException;
 import org.mpi.vasco.txstore.scratchpad.rdbms.DBScratchpad;
@@ -343,6 +344,22 @@ public class DBSelectResult
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
+		return d;
+		
+		
+	}
+	
+	public Timestamp getTimeStamp(int col) throws ScratchpadException {
+		//the following two lines of code is for UTC date format
+		//SimpleDateFormat df= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); 
+		//df.setTimeZone(TimeZone.getTimeZone("UTC"));
+		
+		//SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Timestamp d=null;
+		if( ! hasDecoded)
+			decode();
+		d = Timestamp.valueOf(result.get(nextLine - 1)[col-1]);
+		Debug.println("timestamp, " + d);
 		return d;
 		
 		

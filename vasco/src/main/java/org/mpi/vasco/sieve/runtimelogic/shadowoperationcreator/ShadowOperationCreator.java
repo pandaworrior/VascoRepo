@@ -159,10 +159,12 @@ public class ShadowOperationCreator {
 	 */
 	private void closeRealConnection(Connection originalConn){
 		Debug.println("We have initialized the id factory, now close the real connection");
-		try {
-			originalConn.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
+		if(originalConn != null) {
+			try {
+				originalConn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 

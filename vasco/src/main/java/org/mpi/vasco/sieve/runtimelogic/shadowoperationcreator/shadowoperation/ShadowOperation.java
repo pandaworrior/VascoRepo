@@ -176,6 +176,9 @@ public class ShadowOperation {
 		case CrdtEncodeDecode.LWWINTEGER:
 			long intValue = dis.readLong();
 			return new LwwInteger(dataName, intValue);
+		case CrdtEncodeDecode.LWWLONG:
+			long longValue = dis.readLong();
+			return new LwwLong(dataName, longValue);
 		case CrdtEncodeDecode.LWWLOGICTIMESTAMP:
 			return null;
 		case CrdtEncodeDecode.LWWSTRING:
@@ -195,6 +198,9 @@ public class ShadowOperation {
 		case CrdtEncodeDecode.NORMALINTEGER:
 			int nIntValue = dis.readInt();
 			return new NormalInteger(dataName, nIntValue);
+		case CrdtEncodeDecode.NORMALLONG:
+			long longValue1 = dis.readLong();
+			return new NormalLong(dataName, longValue1);
 		case CrdtEncodeDecode.NORMALSTRING:
 			return new NormalString(dataName, dis.readUTF());
 		case CrdtEncodeDecode.NUMBERDELTADATETIME:
@@ -239,7 +245,10 @@ public class ShadowOperation {
 		}else if(pt instanceof LwwInteger) {	
 			dos.writeByte(CrdtEncodeDecode.LWWINTEGER);
 			dos.writeLong(((LwwInteger) pt).getValue());
-		}else if(pt instanceof LwwLogicalTimestamp) {	
+		}else if(pt instanceof LwwLong) {
+			dos.writeByte(CrdtEncodeDecode.LWWLONG);
+			dos.writeLong(((LwwLong) pt).getValue());
+		}else if(pt instanceof LwwLogicalTimestamp) {
 			throw new RuntimeException("should not be here");
 		}else if(pt instanceof LwwString) {	
 			dos.writeByte(CrdtEncodeDecode.LWWSTRING);
@@ -259,6 +268,9 @@ public class ShadowOperation {
 		}else if(pt instanceof NormalInteger) {	
 			dos.writeByte(CrdtEncodeDecode.NORMALINTEGER);
 			dos.writeInt(((NormalInteger) pt).getValue());
+		}else if(pt instanceof NormalLong) {	
+			dos.writeByte(CrdtEncodeDecode.NORMALLONG);
+			dos.writeLong(((NormalLong) pt).getValue());
 		}else if(pt instanceof NormalString) {	
 			dos.writeByte(CrdtEncodeDecode.NORMALSTRING);
 			dos.writeUTF(((NormalString) pt).getValue());

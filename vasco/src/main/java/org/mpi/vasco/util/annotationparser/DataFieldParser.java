@@ -64,6 +64,10 @@ public class DataFieldParser {
 			dF = new LWW_INTEGER(fieldName, tableName, dataType, isPrimaryKey,
 					isForeignKey, isAutoIncremantal, position);
 			break;
+		case LWWLONG:
+			dF = new LWW_LONG(fieldName, tableName, dataType, isPrimaryKey,
+					isForeignKey, isAutoIncremantal, position);
+			break;
 		case LWWFLOAT:
 			dF = new LWW_FLOAT(fieldName, tableName, dataType, isPrimaryKey,
 					isForeignKey, isAutoIncremantal, position);
@@ -102,6 +106,10 @@ public class DataFieldParser {
 			break;
 		case NORMALINTEGER:
 			dF = new NORMAL_INTEGER(fieldName, tableName, dataType, isPrimaryKey,
+					isForeignKey, isAutoIncremantal, position);
+			break;
+		case NORMALLONG:
+			dF = new NORMAL_LONG(fieldName, tableName, dataType, isPrimaryKey,
 					isForeignKey, isAutoIncremantal, position);
 			break;
 		case NORMALFLOAT:

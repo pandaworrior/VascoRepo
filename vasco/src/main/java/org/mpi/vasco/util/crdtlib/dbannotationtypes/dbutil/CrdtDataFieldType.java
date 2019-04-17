@@ -15,6 +15,9 @@ public enum CrdtDataFieldType {
 	
 	/** The normalinteger. */
 	NORMALINTEGER, 
+	
+	/** The normallong */
+	NORMALLONG,
 	 
 	/** The normalfloat. */
 	NORMALFLOAT, 
@@ -33,7 +36,10 @@ public enum CrdtDataFieldType {
  
 	/** The lwwinteger. */
 	LWWINTEGER, 
-	 
+	
+	/** The lwwlong   */
+	LWWLONG,
+	
 	/** The lwwfloat. */
 	LWWFLOAT, 
 	

@@ -1252,8 +1252,11 @@ public class TxMudConnection
 
 		@Override
 		public Timestamp getTimestamp(int arg0) throws SQLException {
-			System.out.println(" // TODO Auto-generated method stub 665");
-			return null;
+			try {
+				return res.getTimeStamp(arg0);
+			} catch (ScratchpadException e) {
+				throw new SQLException( e);
+			}
 		}
 
 		@Override

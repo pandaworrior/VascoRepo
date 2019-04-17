@@ -67,6 +67,8 @@ public class CrdtFactory {
 		switch(crdtType){
 			case LWWINTEGER:
 				return "LwwInteger";
+			case LWWLONG:
+				return "LwwLong";
 			case LWWFLOAT:
 				return "LwwFloat";
 			case LWWDOUBLE:
@@ -92,6 +94,8 @@ public class CrdtFactory {
 				return "Normal"+getNormalDataType(originalType);
 			case NORMALINTEGER:
 				return "NormalInteger";
+			case NORMALLONG:
+				return "NormalLong";
 			case NORMALBOOLEAN:
 				return "NormalBoolean";
 			case NORMALFLOAT:
@@ -136,6 +140,7 @@ public class CrdtFactory {
 		switch(crdtType){
 		case NONCRDTFIELD:
 		case NORMALINTEGER:
+		case NORMALLONG:
 		case NORMALBOOLEAN:
 		case NORMALFLOAT:
 		case NORMALDOUBLE:
@@ -176,6 +181,7 @@ public class CrdtFactory {
 	public static boolean isLwwType(CrdtDataFieldType crdtType){
 		switch(crdtType){
 		case LWWINTEGER:
+		case LWWLONG:
 		case LWWFLOAT:
 		case LWWDOUBLE:
 		case LWWSTRING:
@@ -253,6 +259,8 @@ public class CrdtFactory {
 			throw new RuntimeException("NONCRDT is depreciated");
 		case NORMALINTEGER:
 			return new NormalInteger(df.get_Data_Field_Name(), Integer.parseInt(value));
+		case NORMALLONG:
+			return new NormalLong(df.get_Data_Field_Name(), Long.parseLong(value));
 		case NORMALBOOLEAN:
 			return new NormalBoolean(df.get_Data_Field_Name(), Boolean.parseBoolean(value));
 		case NORMALFLOAT:
@@ -265,6 +273,8 @@ public class CrdtFactory {
 			return new NormalDateTime(df.get_Data_Field_Name(), DatabaseFunction.convertDateStrToLong(dateFormat, value));
 		case LWWINTEGER:
 			return new LwwInteger(df.get_Data_Field_Name(), Integer.parseInt(value));
+		case LWWLONG:
+			return new LwwLong(df.get_Data_Field_Name(), Long.parseLong(value));
 		case LWWFLOAT:
 			return new LwwFloat(df.get_Data_Field_Name(), Float.parseFloat(value));
 		case LWWDOUBLE:
@@ -278,11 +288,20 @@ public class CrdtFactory {
 		case NUMDELTAINTEGER:
 			if(rs != null) {
 				Debug.println("result set is not null");
-				rs.beforeFirst();
-				rs.next();
-				int finalIValue =  Integer.parseInt(value);
-				int oldIValue = rs.getInt(df.get_Data_Field_Name());
-				int iDelta = finalIValue - oldIValue;
+				int finalIValue =  -1;
+				int oldIValue = -1;
+				int iDelta = -1;
+				if(value.contains("+")) {
+					iDelta = Integer.parseInt(value.substring(value.indexOf('+') + 1).trim());
+				}else if (value.contains("-")) {
+					iDelta = -1 * Integer.parseInt(value.substring(value.indexOf('-') + 1).trim());
+				}else {
+					rs.beforeFirst();
+					rs.next();
+					finalIValue =  Integer.parseInt(value);
+					oldIValue = rs.getInt(df.get_Data_Field_Name());
+					iDelta = finalIValue - oldIValue;
+				}
 				return new NumberDeltaInteger(df.get_Data_Field_Name(), iDelta);
 			}else {
 				Debug.println("result set is null");
@@ -290,6 +309,7 @@ public class CrdtFactory {
 			}
 		case NUMDELTAFLOAT:
 			if(rs != null) {
+				Debug.println("result set is not null");
 				float finalFValue = -1;
 				float oldFValue = -1;
 				float fDelta = -1;
@@ -350,6 +370,8 @@ public class CrdtFactory {
 		case NORMALINTEGER:
 		case LWWINTEGER:
 		case NUMDELTAINTEGER:
+		case NORMALLONG:
+		case LWWLONG:
 			return "0";
 		case NORMALBOOLEAN:
 		case LWWBOOLEAN:

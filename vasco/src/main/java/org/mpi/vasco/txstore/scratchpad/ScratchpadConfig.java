@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import org.mpi.vasco.txstore.scratchpad.resolution.ExecutionPolicy;
+import org.mpi.vasco.util.debug.Debug;
 
 public class ScratchpadConfig
 {
@@ -28,7 +29,8 @@ public class ScratchpadConfig
 		Iterator<Entry<String,ExecutionPolicy>> it = p.entrySet().iterator();
 		while( it.hasNext()) {
 			Entry<String,ExecutionPolicy> e = it.next();
-			policies.put( e.getKey(), e.getValue().duplicate());
+			policies.put( e.getKey().trim(), e.getValue().duplicate());
+			Debug.println("Config table put policy for table " + e.getKey());
 		}
 	}
 	public ScratchpadConfig duplicate() {
@@ -58,7 +60,8 @@ public class ScratchpadConfig
 		
 	}
 	public void putPolicy( String tableName, ExecutionPolicy policy) {
-		policies.put(tableName.toUpperCase(), policy);
+		policies.put(tableName.trim().toUpperCase(), policy);
+		Debug.println("Config table put policy for table " + tableName.toUpperCase());
 	}
 
 }

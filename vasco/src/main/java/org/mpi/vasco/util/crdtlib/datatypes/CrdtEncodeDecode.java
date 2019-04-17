@@ -94,6 +94,10 @@ final public class CrdtEncodeDecode {
 	
 	/** The Constant NUMBERDELTAINTEGER. */
 	public final static byte NUMBERDELTAINTEGER = 17;
+	
+	public final static byte LWWLONG = 18;
+	
+	public final static byte NORMALLONG = 19;
 
 	/**
 	 * Gets the string.
