@@ -370,7 +370,7 @@ public class TxMudConnection
 		if(shdOp != null && !shdOp.isEmpty()) {
 			shdOp.clear();
 		}
-		throw new RuntimeException();
+		//throw new RuntimeException();
 	}
 
 	@Override
