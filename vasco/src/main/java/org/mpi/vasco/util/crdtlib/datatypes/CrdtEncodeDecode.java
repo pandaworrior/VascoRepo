@@ -25,11 +25,13 @@ import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.LwwDouble;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.LwwFloat;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.LwwInteger;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.LwwLogicalTimestamp;
+import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.LwwLong;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.LwwString;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.NormalDateTime;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.NormalDouble;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.NormalFloat;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.NormalInteger;
+import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.NormalLong;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.NormalString;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.NumberDeltaDateTime;
 import org.mpi.vasco.util.crdtlib.datatypes.primitivetypes.NumberDeltaDouble;
@@ -114,7 +116,9 @@ final public class CrdtEncodeDecode {
 			return ((LwwFloat) pt).toString();
 		}else if(pt instanceof LwwInteger){
 			return ((LwwInteger) pt).toString();
-		}else if(pt instanceof LwwLogicalTimestamp){
+		}else if(pt instanceof LwwLong){
+			return ((LwwLong) pt).toString();
+		} else if(pt instanceof LwwLogicalTimestamp){
 			return ((LwwLogicalTimestamp) pt).toString();
 		}else if(pt instanceof LwwString){
 			return ((LwwString) pt).toString();
@@ -126,6 +130,8 @@ final public class CrdtEncodeDecode {
 			return ((NormalFloat) pt).toString();
 		}else if(pt instanceof NormalInteger){
 			return ((NormalInteger) pt).toString();
+		}else if(pt instanceof NormalLong){
+			return ((NormalLong) pt).toString();
 		}else if(pt instanceof NormalString){
 			return ((NormalString) pt).toString();
 		}else if(pt instanceof NumberDeltaDateTime){
@@ -172,6 +178,8 @@ final public class CrdtEncodeDecode {
 			return Float.toString(((LwwFloat) pt).getValue());
 		}else if(pt instanceof LwwInteger){
 			return Long.toString(((LwwInteger) pt).getValue());
+		}else if(pt instanceof LwwLong){
+			return Long.toString(((LwwLong) pt).getValue());
 		}else if(pt instanceof LwwLogicalTimestamp){
 			return StringOperations.addDoubleQuoteToHeadTail(((LwwLogicalTimestamp) pt).getLogicalTimeStamp().getValueString());
 		}else if(pt instanceof LwwString){
@@ -184,6 +192,8 @@ final public class CrdtEncodeDecode {
 			return Float.toString(((NormalFloat) pt).getValue());
 		}else if(pt instanceof NormalInteger){
 			return Integer.toString(((NormalInteger) pt).getValue());
+		}else if(pt instanceof NormalLong){
+			return Long.toString(((NormalLong) pt).getValue());
 		}else if(pt instanceof NormalString){
 			return StringOperations.addDoubleQuoteToHeadTail(((NormalString) pt).getValue());
 		}else if(pt instanceof NumberDeltaDateTime){
