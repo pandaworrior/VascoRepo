@@ -207,21 +207,27 @@ public class CreateStatementParser {
 		bodyStr = bodyStr.replaceAll("\\s+", " ");
 		List<String> declarationList = new ArrayList<String>();
 		int beginIndex = 0;
-		int declarationBeginIndex = 0;
 		while(beginIndex < bodyStr.length()){
 			int commaIndex = bodyStr.indexOf(',', beginIndex);
 			if(commaIndex == -1){
-				declarationList.add(bodyStr.substring(declarationBeginIndex));
+				declarationList.add(bodyStr.substring(beginIndex));
 				break;
 			}else{
-				if(isRightCommaToSplit(bodyStr, declarationBeginIndex, commaIndex)){
-					declarationList.add(bodyStr.substring(declarationBeginIndex, commaIndex));
+				if(isRightCommaToSplit(bodyStr, beginIndex, commaIndex)){
+					declarationList.add(bodyStr.substring(beginIndex, commaIndex));
 					beginIndex = commaIndex + 1;
-					declarationBeginIndex = beginIndex;
 				}else{
-					declarationBeginIndex = beginIndex;
-					beginIndex = commaIndex + 1;
-					continue;
+					//declarationBeginIndex = beginIndex;
+					//beginIndex = commaIndex + 1;
+					//continue;
+					//search for the right bracket
+					int indexOfRightBracket = bodyStr.indexOf(')', commaIndex);
+					declarationList.add(bodyStr.substring(beginIndex, indexOfRightBracket + 1));
+					if(bodyStr.indexOf(',', indexOfRightBracket) != -1) {
+						beginIndex = commaIndex + 1;
+					}else {
+						beginIndex = indexOfRightBracket + 1;
+					}
 				}
 			}
 		}

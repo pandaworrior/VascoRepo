@@ -10,7 +10,7 @@ package org.mpi.vasco.util.crdtlib.dbannotationtypes.dbutil;
 public class DatabaseDictionary {
 
 	/** The Constant dataTypeList. */
-	final static String[] dataTypeList = { "INT", "BIGINT", "FLOAT", "DOUBLE", "BOOL",
+	final static String[] dataTypeList = { "INT", "BIGINT", "TINYINT", "FLOAT", "DOUBLE", "BOOL",
 			"BOOLEAN", "DATE", "DATETIME", "TIMESTAMP", "CHAR", "VARCHAR" ,
 			"REAL", "INTEGER", "TEXT"};
 	
