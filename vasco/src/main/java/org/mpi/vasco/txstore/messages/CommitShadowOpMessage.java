@@ -7,6 +7,7 @@ import org.mpi.vasco.txstore.util.ProxyTxnId;
 import org.mpi.vasco.txstore.util.ReadWriteSet;
 import org.mpi.vasco.txstore.util.TimeStamp;
 import org.mpi.vasco.util.UnsignedTypes;
+import org.mpi.vasco.util.debug.Debug;
 
 public class CommitShadowOpMessage extends MessageBase{
     ProxyTxnId txnId;
@@ -34,6 +35,8 @@ public class CommitShadowOpMessage extends MessageBase{
 	logicalClock.getBytes(getBytes(), offset);
 	offset += logicalClock.getByteSize();
 	
+	Debug.println("New logical clock " + logicalClock.toString());
+	
 	if (bytes.length != offset)
 	    throw new RuntimeException("failed to consume entire byte array");
 	
@@ -58,6 +61,8 @@ public class CommitShadowOpMessage extends MessageBase{
     	offset += timestamp.getByteSize();
     	logicalClock.getBytes(getBytes(), offset);
     	offset += logicalClock.getByteSize();
+    	
+    	Debug.println("New logical clock " + logicalClock.toString());
     	
     	if (bytes.length != offset)
     	    throw new RuntimeException("failed to consume entire byte array");

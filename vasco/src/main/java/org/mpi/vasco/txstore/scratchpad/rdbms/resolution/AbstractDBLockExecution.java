@@ -1451,13 +1451,15 @@ public abstract class AbstractDBLockExecution implements ExecutionPolicy
 				db.addToWriteSet( DBWriteSetEntry.createEntry( dbOp.getTable().toString(), pkVal, this.blue, true));
 				//db.addToOpLog( new DBSingleOpPair( op, pkVal));
 				deletedPks.add(pkVal);
-			}
-			
-			String[] uniqueIndexStrs = def.getUqIndicesPlain();
-			for(int k = 0; k < uniqueIndexStrs.length; k++){
-				String[] uqStr = new String[1];
-				uqStr[0] = res.getString(uniqueIndexStrs[k]);
-				db.addToWriteSet( DBWriteSetEntry.createEntry( def.name, uqStr, blue, true));
+			}else {
+				//TODO: only check this if you do not have primary keys
+				String[] uniqueIndexStrs = def.getUqIndicesPlain();
+				for(int k = 0; k < uniqueIndexStrs.length; k++){
+					Debug.println("You have an unique index string, please check " + uniqueIndexStrs[k]);
+					String[] uqStr = new String[1];
+					uqStr[0] = res.getString(uniqueIndexStrs[k]);
+					db.addToWriteSet( DBWriteSetEntry.createEntry( def.name, uqStr, blue, true));
+				}
 			}
 		}
 		res.close();
