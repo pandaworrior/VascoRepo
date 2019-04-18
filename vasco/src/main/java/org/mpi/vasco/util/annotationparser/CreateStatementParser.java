@@ -224,7 +224,7 @@ public class CreateStatementParser {
 					int indexOfRightBracket = bodyStr.indexOf(')', commaIndex);
 					declarationList.add(bodyStr.substring(beginIndex, indexOfRightBracket + 1));
 					if(bodyStr.indexOf(',', indexOfRightBracket) != -1) {
-						beginIndex = commaIndex + 1;
+						beginIndex = bodyStr.indexOf(',', indexOfRightBracket) + 1;
 					}else {
 						beginIndex = indexOfRightBracket + 1;
 					}
