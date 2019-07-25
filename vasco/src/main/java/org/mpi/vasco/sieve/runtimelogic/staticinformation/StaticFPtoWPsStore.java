@@ -158,8 +158,10 @@ public class StaticFPtoWPsStore {
 		Debug.println("receive input size is " +contentLines.size()/3);
 		for(int i = 0; i < contentLines.size(); i = i+3){
 			String fpStr = contentLines.get(i);
+			//System.out.println("fingerprint " + fpStr);
 			assert(fpStr.startsWith(openerOfFingerPrint));
 			String wpStr = contentLines.get(i+1);
+			//System.out.println("wp string " + wpStr);
 			assert(wpStr.startsWith(openerOfWeakestPrecondition));
 			//add this info to store
 			String pureFpStr = fpStr.substring(openerOfFingerPrint.length());
@@ -172,11 +174,12 @@ public class StaticFPtoWPsStore {
 			}
 			String pureWpStr = wpStr.substring(openerOfWeakestPrecondition.length());
 			String simplifiedOpName = contentLines.get(i+2).substring(openerOfSimplifiedName.length());
+			//System.out.println("Simplified op string " + simplifiedOpName);
 			this.addStaticFPtoWPsStoreNode( fingerPrints, 
 					new WeakestPrecondition(pureWpStr, simplifiedOpName));
 		}
 		
-		Debug.println("generated wp node number " + this.numOfWPNode);
+		//System.out.println("generated wp node number " + this.numOfWPNode);
 	}
 	
 	/**
@@ -213,22 +216,24 @@ public class StaticFPtoWPsStore {
 	 * @param wp the wp
 	 */
 	public void addStaticFPtoWPsStoreNode(String[] fingerPrintChain, WeakestPrecondition wp){
-		Debug.println("Trying to add a wp node");
+		Debug.println("Trying to add a wp node ");
 		StaticFPtoWPsStoreNode current = root;
 		boolean isNew = false;
 		for(int i = 0; i < fingerPrintChain.length; i++){
 			String singleFP = fingerPrintChain[i];
+			//System.out.println("Try to add " + singleFP + " for " + wp.toString());
 			StaticFPtoWPsStoreNode findMatchChildNode = current.findMatchingChildNode(singleFP);
 			if(findMatchChildNode != null){
-				Debug.println("find a node, please go to the next");
+				//System.out.println("find a node, please go to the next");
 				current = findMatchChildNode;
 				continue;
 			}else {
-				Debug.println("cannot find the next one node, creating a node and add to it");
+				//System.out.println("cannot find the next one node, creating a node and add to it");
 				StaticFPtoWPsStoreNode firstNodeOfChain = this.createChainOfNodes(fingerPrintChain, i, wp);
 				current.addOneChildNode(firstNodeOfChain);
+				current = firstNodeOfChain;
 				isNew = true;
-				break;
+				//break;
 			}
 		}
 		
@@ -297,6 +302,7 @@ public class StaticFPtoWPsStore {
 	 */
 	public WeakestPrecondition fetchWeakestPreconditionByGivenSequenceOfOperations(List<String> signatureList){
 		assert(signatureList.size() > 0);
+		
 		WeakestPrecondition wp = null;
 		StaticFPtoWPsStoreNode current = root;
 		StaticFPtoWPsStoreNode deepestNodeVisited = null;
@@ -312,8 +318,10 @@ public class StaticFPtoWPsStore {
 				break;
 			
 			String subSignature = it.next();
+			//System.out.println("Try to match " + subSignature);
 			StaticFPtoWPsStoreNode findMatchChildNode = current.findMatchingChildNode(subSignature);
 			if(findMatchChildNode == null){
+				//System.out.println("I did not find");
 				if(prefix.isEmpty() || current.getNodeId() == deepestNodeVisited.getNodeId()) {
 					//either the prefix is empty, which means that you only search forward
 					//or the current node you search is the last node on the prefix, which means you already move forward
@@ -330,6 +338,7 @@ public class StaticFPtoWPsStore {
 					isFoundInPrefix = true;
 				}
 			}else {
+				//System.out.println("I did find one");
 				current = findMatchChildNode;
 				// matching, please go the next one
 				if(!prefix.containsKey(new Integer(current.getNodeId()))) {
@@ -343,12 +352,12 @@ public class StaticFPtoWPsStore {
 		if(deepestNodeVisited != null) {
 			if(deepestNodeVisited.isLastNodeOnPath()) {
 				wp = deepestNodeVisited.getWeakestPrecondition();
-				Debug.println("You find your wp " + wp.toString());
+				//System.out.println("You find your wp " + wp.toString());
 			}else {
-				System.out.println("You didn't find wp 1");
+				//System.out.println("You didn't find wp 1");
 			}
 		}else {
-			System.out.println("You didn't find wp 2");
+			//System.out.println("You didn't find wp 2");
 		}
 		return wp;
 	}

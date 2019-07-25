@@ -95,6 +95,12 @@ public class TxMudConnection
 	@Override
 	public void commit() throws SQLException {
 		Debug.println("Proxy commit a transaction");
+		
+		if(!inTx) {
+			// if a transaction does not issue any reads and updates
+			return;
+		}
+		
 		inTx = false;
 		
 		try {
@@ -528,6 +534,7 @@ public class TxMudConnection
 
 	@Override
 	public ResultSet executeQuery(String arg0) throws SQLException {
+		long startTime = System.nanoTime();
 		if( ! inTx) {
 			txId = proxy.beginTxn();
 			inTx = true;
@@ -544,6 +551,14 @@ public class TxMudConnection
 		
 		ResultSet res;
 		res = proxy.executeOrig( DBSingleOperation.createOperation( arg0), txId);
+		int row = 0;
+		if(res != null) {
+			while(res.next()) {
+				row++;
+			}
+			res.beforeFirst();
+		}
+		System.out.println("1st place query "+ arg0 +" gets "+ row +" rows, spent " + (System.nanoTime() - startTime) * 0.000001 + " ms ");
 		return res;
 	}
 
@@ -2286,10 +2301,16 @@ public class TxMudConnection
 			}
 			DBSelectResult res;
 			try {
+				//long startTime = System.nanoTime();
 				Result r = proxy.execute( DBSingleOperation.createOperation( sql), txId); //raw format got from the network
 				res = DBSelectResult.createResult(r);
 				TxMudResultSet txMudRs = new TxMudResultSet( res);
 				shdOpCreator.setCachedResultSetForDelta(txMudRs);
+				/*if(res != null) {
+					System.out.println("2nd place query "+ sql +" gets "+res.getResultSize()+" rows, spent " + (System.nanoTime() - startTime) * 0.000001 + " ms");
+				}else {
+					System.out.println("2nd place query "+ sql +" gets 0 rows, spent " + (System.nanoTime() - startTime) * 0.000001 + " ms");
+				}*/
 				return txMudRs;
 			} catch (ScratchpadException e) {
 				e.printStackTrace();

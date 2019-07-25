@@ -364,4 +364,11 @@ public class DBSelectResult
 		
 		
 	}
+	
+	public int getResultSize() throws ScratchpadException {
+		if(! hasDecoded) {
+			decode();
+		}
+		return this.result.size();
+	}
 }

@@ -28,6 +28,7 @@ public class LogicalClock implements java.io.Serializable {
             s = DefaultForInTrx;
         }
         String tmp[] = s.split("-");
+        //System.out.println("You have receive a string please parse to logical clock " + s);
         dcCount = new long[tmp.length];
         for (int i = 0; i < tmp.length; i++) {
             dcCount[i] = Long.parseLong(tmp[i]);
@@ -180,6 +181,11 @@ public class LogicalClock implements java.io.Serializable {
         try {
             boolean res = true;
 
+            if(lc.dcCount.length != dcCount.length) {
+            	System.out.println("My dc length is " + dcCount.length + " your length is " + lc.dcCount.length);
+            	System.out.println("My clock is " + this.toString() + " your clock is " + lc.toString());
+            	throw new RuntimeException("Please check something wrong!");
+            }
             for (int i = 0; res && i < dcCount.length; i++) {
                 res = dcCount[i] <= lc.dcCount[i];
             }

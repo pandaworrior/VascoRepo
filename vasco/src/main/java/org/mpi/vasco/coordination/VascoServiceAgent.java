@@ -91,23 +91,30 @@ public class VascoServiceAgent {
 	
 	public LockRequest generateLockRequestFromWriteSet(String opName, ProxyTxnId txnId, 
 			WriteSet wse){
-		Debug.println("Generate lock request");
+		//System.out.println("Generate lock request");
 		int pType = this.getProtocolType(opName);
 		if(pType != -1){
 			//generate a lockrequest
 			LockRequest lr = new LockRequest(opName);
 			for (int i = 0; i < wse.size(); i ++){
 				WriteSetEntry wseEntry = wse.getWriteSetEntry(i);
-				if(wseEntry.isInvariantRelated()){
-					Debug.println("The item is invariant related " + wseEntry.getObjectId());
+				//if(wseEntry.isInvariantRelated()){
+					//System.out.println("The item is invariant related " + wseEntry.getObjectId());
 					lr.addKey(wseEntry.getObjectId());
-				}
+				//}else {
+					//System.out.println("The item is not invariant related " + wseEntry.getObjectId());
+				//}
 			}
 			assert(!lr.getKeyList().isEmpty());
-			Debug.printf("Generate a lock request %s\n", lr.toString());
+			if(lr.getKeyList().isEmpty()) {
+				System.out.println("You want to coordination but no key identified");
+			}
+			//System.out.printf("Generate a lock request %s\n", lr.toString());
 			return lr;
+		}else {
+			//System.out.println("Cannot find protocol type for opName " + opName);
 		}
-		Debug.println("Generate a null lock request");
+		//System.out.println("Generate a null lock request");
 		return null;
 	}
 	
